@@ -1,12 +1,9 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { useRouter, RouterLink } from 'vue-router'
 import DemoBanner from '@/components/DemoBanner.vue'
 import DemoBadge from '@/components/DemoBadge.vue'
 import TiendaContextBar from '@/components/TiendaContextBar.vue'
 import AppShell from '@/layout/AppShell.vue'
-
-const router = useRouter()
 
 interface Repair { date: string; detail: string; cost: number; tech: string }
 interface Equipment {
@@ -189,10 +186,6 @@ onMounted(() => {
 onUnmounted(() => {
   stopCamera()
 })
-
-function back() {
-  router.push('/modulos')
-}
 
 const alerts = [
   {

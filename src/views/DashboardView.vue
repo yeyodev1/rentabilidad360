@@ -50,24 +50,6 @@ function openModule(route: string) {
   router.push(route)
 }
 
-async function logout() {
-  const ok = await ui.requestConfirm({
-    title: '¿Cerrar sesión?',
-    message: 'Conservaremos tu diagnóstico actual en este dispositivo.',
-    confirmLabel: 'Sí, cerrar sesión',
-    cancelLabel: 'Quedarme',
-    tone: 'danger',
-    icon: 'fa-solid fa-right-from-bracket',
-  })
-  if (!ok) return
-  userStore.clear()
-  ui.showToast({
-    title: 'Sesión cerrada',
-    tone: 'success',
-    icon: 'fa-solid fa-door-closed',
-  })
-}
-
 function goLogin() {
   router.push('/login')
 }

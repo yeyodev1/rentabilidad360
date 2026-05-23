@@ -166,7 +166,7 @@ export const useOnboardingStore = defineStore('onboarding', () => {
         diagnostics.value = rest
       }
     } else if (!activeTiendaId.value || !tiendas.value.find((t) => t.id === activeTiendaId.value)) {
-      activeTiendaId.value = tiendas.value[0].id
+      activeTiendaId.value = tiendas.value[0]?.id ?? null
     }
   }
 
@@ -176,9 +176,9 @@ export const useOnboardingStore = defineStore('onboarding', () => {
 
   const results = computed<AnalysisResults | null>(() => {
     if (activeTienda.value && diagnostics.value[activeTienda.value.id]) {
-      return diagnostics.value[activeTienda.value.id]
+      return diagnostics.value[activeTienda.value.id]!
     }
-    if (diagnostics.value['__legacy__']) return diagnostics.value['__legacy__']
+    if (diagnostics.value['__legacy__']) return diagnostics.value['__legacy__']!
     return null
   })
 
@@ -210,7 +210,7 @@ export const useOnboardingStore = defineStore('onboarding', () => {
   function updateTienda(id: string, patch: Partial<Tienda>) {
     const idx = tiendas.value.findIndex((t) => t.id === id)
     if (idx < 0) return
-    tiendas.value[idx] = { ...tiendas.value[idx], ...patch, id: tiendas.value[idx].id }
+    tiendas.value[idx] = { ...tiendas.value[idx]!, ...patch, id: tiendas.value[idx]!.id } as Tienda
   }
 
   function removeTienda(id: string) {

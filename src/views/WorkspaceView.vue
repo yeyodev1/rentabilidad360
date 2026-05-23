@@ -1,12 +1,11 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
-import { useRouter, RouterLink } from 'vue-router'
+import { RouterLink } from 'vue-router'
 import AppShell from '@/layout/AppShell.vue'
 import { useOnboardingStore, type Tienda, type CurrencyCode, CURRENCY_SYMBOLS, PAIN_POINTS } from '@/stores/onboarding'
 import { useUserStore } from '@/stores/user'
 import { useUIStore } from '@/stores/ui'
 
-const router = useRouter()
 const store = useOnboardingStore()
 const userStore = useUserStore()
 const ui = useUIStore()

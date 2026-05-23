@@ -1,12 +1,9 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch, onBeforeUnmount } from 'vue'
-import { useRouter, RouterLink } from 'vue-router'
 import DemoBanner from '@/components/DemoBanner.vue'
 import DemoBadge from '@/components/DemoBadge.vue'
 import TiendaContextBar from '@/components/TiendaContextBar.vue'
 import AppShell from '@/layout/AppShell.vue'
-
-const router = useRouter()
 
 type Demand = 'high' | 'low' | 'waste' | 'normal'
 
@@ -62,7 +59,7 @@ const openCell = ref<{ row: number; col: number } | null>(null)
 
 const activeCell = computed<Cell | null>(() => {
   if (!openCell.value) return null
-  return grid.value[openCell.value.row][openCell.value.col]
+  return grid.value[openCell.value.row]?.[openCell.value.col] ?? null
 })
 
 function openCellModal(row: number, col: number) {
@@ -70,7 +67,8 @@ function openCellModal(row: number, col: number) {
 }
 
 function adjustStaff(row: number, col: number, delta: number) {
-  const cell = grid.value[row][col]
+  const cell = grid.value[row]?.[col]
+  if (!cell) return
   const next = cell.staff + delta
   if (next < 0 || next > 12) return
   cell.staff = next
@@ -125,18 +123,17 @@ function showToast(msg: string) {
 const suggestionVisible = ref(true)
 
 function applySuggestion() {
-  // Reduce 1 mesero Mié 16:00 (row index where '16:00', col '4' Mié = index 2)
   const wedRow = hours.indexOf('16:00')
   const wedCol = days.indexOf('Mié')
   if (wedRow >= 0 && wedCol >= 0) {
-    const c = grid.value[wedRow][wedCol]
-    if (c.staff > 0) c.staff -= 1
+    const c = grid.value[wedRow]?.[wedCol]
+    if (c && c.staff > 0) c.staff -= 1
   }
-  // Refuerza Viernes 20:00
   const friRow = hours.indexOf('20:00')
   const friCol = days.indexOf('Vie')
   if (friRow >= 0 && friCol >= 0) {
-    grid.value[friRow][friCol].staff += 1
+    const c = grid.value[friRow]?.[friCol]
+    if (c) c.staff += 1
   }
   suggestionVisible.value = false
   showToast('Aplicado: ajustes en horarios sugeridos.')
@@ -144,10 +141,6 @@ function applySuggestion() {
 
 function dismissSuggestion() {
   suggestionVisible.value = false
-}
-
-function back() {
-  router.push('/modulos')
 }
 
 function formatCurrency(v: number): string {

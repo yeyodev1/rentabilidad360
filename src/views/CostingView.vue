@@ -1,12 +1,9 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { useRouter, RouterLink } from 'vue-router'
 import DemoBanner from '@/components/DemoBanner.vue'
 import DemoBadge from '@/components/DemoBadge.vue'
 import TiendaContextBar from '@/components/TiendaContextBar.vue'
 import AppShell from '@/layout/AppShell.vue'
-
-const router = useRouter()
 
 interface Ingredient {
   id: string
@@ -150,10 +147,6 @@ const alerts = ref<AlertSlot[]>([
 const activeSuggestion = ref<Suggestion | null>(null)
 function showSuggestion(a: AlertSlot) {
   activeSuggestion.value = a.suggestion
-}
-
-function back() {
-  router.push('/modulos')
 }
 
 onMounted(() => {
