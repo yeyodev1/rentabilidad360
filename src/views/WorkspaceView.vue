@@ -12,7 +12,6 @@ const userStore = useUserStore()
 const ui = useUIStore()
 
 onMounted(() => {
-  store.ensureMainTienda()
   userStore.hydrate()
   document.title = 'Workspace · Rentabilidad360'
 })
@@ -287,12 +286,43 @@ function statusMeta(s: Tienda['status']) {
               <h2><i class="fa-solid fa-store" /> Tiendas del workspace</h2>
               <p>Cambia entre tiendas para filtrar el contenido del resto del app.</p>
             </div>
-            <button class="btn primary sm" type="button" @click="openCreate">
+            <button v-if="store.tiendas.length > 0" class="btn primary sm" type="button" @click="openCreate">
               <i class="fa-solid fa-plus" /> Agregar
             </button>
           </header>
 
-          <ul class="tienda-list">
+          <section v-if="store.tiendas.length === 0" class="empty-state">
+            <div class="es-illust" aria-hidden="true">
+              <i class="fa-solid fa-store" />
+              <i class="fa-solid fa-lightbulb" />
+              <i class="fa-solid fa-plus" />
+            </div>
+            <h3 class="es-title">Aún no agregaste tiendas</h3>
+            <p class="es-msg">
+              Tu workspace puede vivir <strong>sin tiendas</strong> mientras es un proyecto en planeación.
+              Cuando estés listo para operar, agrega tu primera tienda y desbloquea los módulos.
+            </p>
+            <div class="es-options">
+              <button class="es-card primary" type="button" @click="openCreate">
+                <span class="es-card-ico"><i class="fa-solid fa-plus" /></span>
+                <div>
+                  <strong>Agregar mi primera tienda</strong>
+                  <em>Sucursal, dark kitchen, food truck…</em>
+                </div>
+                <i class="fa-solid fa-arrow-right" />
+              </button>
+              <div class="es-card ghost">
+                <span class="es-card-ico ghost"><i class="fa-solid fa-lightbulb" /></span>
+                <div>
+                  <strong>Mantener como proyecto</strong>
+                  <em>Sigue explorando con datos demo. No bloquea nada.</em>
+                </div>
+                <span class="es-tag">Activo</span>
+              </div>
+            </div>
+          </section>
+
+          <ul v-else class="tienda-list">
             <li
               v-for="t in store.tiendas"
               :key="t.id"
@@ -347,7 +377,7 @@ function statusMeta(s: Tienda['status']) {
             </li>
           </ul>
 
-          <button class="add-btn" type="button" @click="openCreate">
+          <button v-if="store.tiendas.length > 0" class="add-btn" type="button" @click="openCreate">
             <i class="fa-solid fa-plus" />
             <span>
               <strong>Agregar otra tienda</strong>
@@ -689,6 +719,89 @@ function statusMeta(s: Tienda['status']) {
     em { font-style: normal; font-size: 0.74rem; color: $text-secondary; }
   }
   > i:last-child { color: $primary; }
+}
+
+/* ===== Empty state ===== */
+.empty-state {
+  display: flex; flex-direction: column; align-items: center; text-align: center;
+  gap: 14px; padding: 32px 18px;
+  background: linear-gradient(180deg, rgba(245, 158, 11, 0.06), white);
+  border: 1px dashed rgba(245, 158, 11, 0.5);
+  border-radius: 18px;
+}
+.es-illust {
+  position: relative;
+  width: 72px; height: 72px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 22px;
+  background: linear-gradient(135deg, #f59e0b, #fb923c);
+  color: white;
+  font-size: 1.8rem;
+  box-shadow: 0 12px 28px rgba(245, 158, 11, 0.35);
+  > i:nth-child(2) {
+    position: absolute; top: -6px; right: -6px;
+    width: 28px; height: 28px;
+    background: white; color: #f59e0b;
+    border-radius: 50%; font-size: 0.75rem;
+    display: inline-flex; align-items: center; justify-content: center;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+  }
+  > i:nth-child(3) {
+    position: absolute; bottom: -4px; right: -4px;
+    width: 22px; height: 22px;
+    background: $primary; color: white;
+    border-radius: 50%; font-size: 0.62rem;
+    display: inline-flex; align-items: center; justify-content: center;
+    box-shadow: 0 4px 10px rgba($primary, 0.45);
+  }
+  > i:nth-child(1) {
+    position: relative;
+  }
+}
+.es-title { margin: 0; font-size: 1.1rem; font-weight: 800; color: $primary-dark; }
+.es-msg {
+  margin: 0; font-size: 0.88rem; color: $text-secondary; line-height: 1.55; max-width: 460px;
+  strong { color: $primary-dark; }
+}
+.es-options {
+  width: 100%; max-width: 540px;
+  display: grid; gap: 10px; margin-top: 4px;
+}
+.es-card {
+  display: grid; grid-template-columns: 44px 1fr auto;
+  align-items: center; gap: 12px;
+  padding: 14px 16px; border-radius: 14px;
+  border: none; cursor: pointer;
+  font-family: $font-principal; text-align: left;
+  strong { font-size: 0.95rem; font-weight: 800; display: block; line-height: 1.2; }
+  em { font-style: normal; font-size: 0.78rem; color: $text-secondary; }
+
+  &.primary {
+    background: linear-gradient(135deg, $primary, #1678b0);
+    color: white;
+    box-shadow: 0 12px 26px rgba($primary, 0.3);
+    transition: transform 0.2s;
+    em { color: rgba(255,255,255,0.78); }
+    &:hover { transform: translateY(-1px); }
+  }
+  &.ghost {
+    background: white; color: $primary-dark;
+    border: 1.5px dashed rgba($primary-dark, 0.18);
+    cursor: default;
+  }
+}
+.es-card-ico {
+  width: 44px; height: 44px; border-radius: 12px;
+  background: rgba(255,255,255,0.18); color: white;
+  display: inline-flex; align-items: center; justify-content: center; font-size: 1.05rem;
+  &.ghost {
+    background: rgba(245, 158, 11, 0.12); color: #b45309;
+  }
+}
+.es-tag {
+  font-size: 0.62rem; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase;
+  background: rgba($alert-success, 0.14); color: $alert-success;
+  padding: 4px 8px; border-radius: 999px;
 }
 
 /* ===== Drawer ===== */

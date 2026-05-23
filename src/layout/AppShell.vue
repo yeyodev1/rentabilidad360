@@ -42,7 +42,6 @@ function pickTienda(id: string) {
 
 onMounted(() => {
   userStore.hydrate()
-  store.ensureMainTienda()
   document.addEventListener('click', onDocClick)
 })
 
@@ -171,48 +170,65 @@ function upgrade() {
           </button>
 
           <div class="tienda-switcher">
+            <template v-if="store.tiendas.length > 0">
+              <button
+                type="button"
+                :class="['tienda-current', { open: tiendaMenuOpen }]"
+                @click.stop="tiendaMenuOpen = !tiendaMenuOpen"
+                aria-haspopup="menu"
+                :aria-expanded="tiendaMenuOpen"
+              >
+                <span class="tienda-flag">
+                  <i class="fa-solid fa-store" />
+                </span>
+                <span class="tienda-text">
+                  <em>Viendo datos de</em>
+                  <strong>{{ store.activeTienda?.name || 'Sin tienda' }}</strong>
+                </span>
+                <i class="fa-solid fa-chevron-down chev" />
+              </button>
+
+              <Transition name="menu">
+                <div v-if="tiendaMenuOpen" class="tienda-menu" role="menu" @click.stop>
+                  <span class="menu-label">Tiendas del workspace</span>
+                  <button
+                    v-for="t in store.tiendas"
+                    :key="t.id"
+                    type="button"
+                    :class="['t-item', { active: store.activeTiendaId === t.id }]"
+                    @click="pickTienda(t.id)"
+                  >
+                    <span class="t-ico"><i class="fa-solid fa-store" /></span>
+                    <span class="t-meta">
+                      <strong>{{ t.name }}</strong>
+                      <em>{{ t.city || (t.isMain ? 'Principal' : 'Sucursal') }}</em>
+                    </span>
+                    <i v-if="store.activeTiendaId === t.id" class="fa-solid fa-circle-check ok" />
+                  </button>
+
+                  <div class="menu-divider" />
+
+                  <button type="button" class="t-action" @click="goWorkspace">
+                    <i class="fa-solid fa-gear" /> Gestionar tiendas
+                  </button>
+                </div>
+              </Transition>
+            </template>
+
             <button
+              v-else
               type="button"
-              :class="['tienda-current', { open: tiendaMenuOpen }]"
-              @click.stop="tiendaMenuOpen = !tiendaMenuOpen"
-              aria-haspopup="menu"
-              :aria-expanded="tiendaMenuOpen"
+              class="tienda-empty"
+              @click="goWorkspace"
+              title="Agregar tu primera tienda"
             >
-              <span class="tienda-flag">
-                <i class="fa-solid fa-store" />
-              </span>
+              <span class="tienda-flag empty"><i class="fa-solid fa-lightbulb" /></span>
               <span class="tienda-text">
-                <em>Viendo datos de</em>
-                <strong>{{ store.activeTienda?.name || 'Sucursal Principal' }}</strong>
+                <em>Modo proyecto · sin tienda</em>
+                <strong>Agregar primera tienda</strong>
               </span>
-              <i class="fa-solid fa-chevron-down chev" />
+              <i class="fa-solid fa-plus add" />
             </button>
-
-            <Transition name="menu">
-              <div v-if="tiendaMenuOpen" class="tienda-menu" role="menu" @click.stop>
-                <span class="menu-label">Tiendas del workspace</span>
-                <button
-                  v-for="t in store.tiendas"
-                  :key="t.id"
-                  type="button"
-                  :class="['t-item', { active: store.activeTiendaId === t.id }]"
-                  @click="pickTienda(t.id)"
-                >
-                  <span class="t-ico"><i class="fa-solid fa-store" /></span>
-                  <span class="t-meta">
-                    <strong>{{ t.name }}</strong>
-                    <em>{{ t.city || (t.isMain ? 'Principal' : 'Sucursal') }}</em>
-                  </span>
-                  <i v-if="store.activeTiendaId === t.id" class="fa-solid fa-circle-check ok" />
-                </button>
-
-                <div class="menu-divider" />
-
-                <button type="button" class="t-action" @click="goWorkspace">
-                  <i class="fa-solid fa-plus" /> Gestionar tiendas
-                </button>
-              </div>
-            </Transition>
           </div>
         </div>
 
@@ -275,9 +291,17 @@ function upgrade() {
             <i :class="activeNav?.icon || 'fa-solid fa-grid-2'" />
             {{ activeNav?.label || 'Panel' }}
           </span>
-          <span v-if="store.activeTienda" class="crumb-tienda" :title="`Filtrando por ${store.activeTienda.name}`">
+          <span
+            v-if="store.activeTienda"
+            class="crumb-tienda"
+            :title="`Filtrando por ${store.activeTienda.name}`"
+          >
             <i class="fa-solid fa-store" />
             {{ store.activeTienda.name }}
+          </span>
+          <span v-else class="crumb-tienda empty" title="Modo proyecto · sin tienda">
+            <i class="fa-solid fa-lightbulb" />
+            Modo proyecto
           </span>
         </div>
 
@@ -547,6 +571,38 @@ function upgrade() {
   padding: 4px 10px; border-radius: 999px;
   font-size: 0.78rem; font-weight: 700;
   i { font-size: 0.72rem; }
+  &.empty {
+    background: rgba(245, 158, 11, 0.14);
+    color: #b45309;
+    i { color: #f59e0b; }
+  }
+}
+
+.tienda-empty {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 11px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.18), rgba(245, 158, 11, 0.06));
+  border: 1px dashed rgba(245, 158, 11, 0.5);
+  color: #fff7ed;
+  font-family: $font-principal;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.2s, border-color 0.2s, transform 0.2s;
+  &:hover {
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.28), rgba(245, 158, 11, 0.1));
+    border-color: #f59e0b;
+    transform: translateY(-1px);
+  }
+  .tienda-flag.empty {
+    background: linear-gradient(135deg, #f59e0b, #fb923c);
+    color: white;
+  }
+  .add { color: #ffd66b; font-size: 0.85rem; }
 }
 .ws-avatar {
   width: 36px; height: 36px; border-radius: 10px;
@@ -558,9 +614,9 @@ function upgrade() {
 .nav { display: flex; flex-direction: column; gap: 6px; }
 .nav-item {
   display: grid;
-  grid-template-columns: 56px 1fr 14px;
+  grid-template-columns: 52px minmax(0, 1fr) auto;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   padding: 8px 10px; border-radius: 14px;
   color: rgba(255,255,255,0.78);
   text-decoration: none;
@@ -580,13 +636,18 @@ function upgrade() {
 }
 .nav-thumb { transition: transform 0.25s; }
 .nav-text {
-  display: inline-flex; flex-direction: column; line-height: 1.2;
+  display: flex; flex-direction: column; line-height: 1.2;
   min-width: 0;
-  strong { font-size: 0.88rem; font-weight: 700; color: inherit; }
+  strong {
+    font-size: 0.88rem; font-weight: 700; color: inherit;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    display: block;
+  }
   em {
     font-style: normal; font-size: 0.7rem; color: rgba(255,255,255,0.45);
     margin-top: 2px;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    display: block;
   }
 }
 .nav-chev {

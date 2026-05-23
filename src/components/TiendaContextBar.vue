@@ -54,6 +54,25 @@ function pick(id: string) {
       </button>
     </div>
   </div>
+
+  <div v-else class="tcb empty">
+    <div class="tcb-left">
+      <span class="tcb-ico amber"><i class="fa-solid fa-lightbulb" /></span>
+      <div class="tcb-info">
+        <span class="tcb-eyebrow amber">Modo proyecto</span>
+        <strong class="tcb-name">Workspace sin tiendas todavía</strong>
+        <span class="tcb-meta">
+          <i class="fa-solid fa-circle-info" />
+          Estás explorando la herramienta. Cuando estés listo, agrega tu primera tienda para activar la operación real.
+        </span>
+      </div>
+    </div>
+    <div class="tcb-right">
+      <button type="button" class="tcb-add" @click="goManage">
+        <i class="fa-solid fa-plus" /> Agregar primera tienda
+      </button>
+    </div>
+  </div>
 </template>
 
 <style scoped lang="scss">
@@ -115,5 +134,23 @@ function pick(id: string) {
   border: none; font-family: $font-principal; font-weight: 700; font-size: 0.78rem;
   cursor: pointer;
   &:hover { background: #0e1e3c; }
+}
+
+.tcb.empty {
+  border-left-color: #f59e0b;
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.08), white);
+  .tcb-ico.amber {
+    background: linear-gradient(135deg, #f59e0b, #fb923c);
+    box-shadow: 0 6px 16px rgba(245, 158, 11, 0.28);
+  }
+  .tcb-eyebrow.amber { color: #b45309; }
+}
+.tcb-add {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 10px 14px; border-radius: 10px;
+  background: linear-gradient(135deg, #f59e0b, #fb923c); color: white;
+  border: none; font-family: $font-principal; font-weight: 800; font-size: 0.82rem;
+  cursor: pointer;
+  box-shadow: 0 8px 20px rgba(245, 158, 11, 0.35);
 }
 </style>

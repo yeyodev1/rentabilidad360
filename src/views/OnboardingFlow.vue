@@ -139,11 +139,30 @@ function jumpTo(n: number) {
       </div>
     </header>
 
-    <div class="ob-current-pill">
-      <span class="cp-eyebrow"><i class="fa-solid fa-bolt" /> Diagnóstico</span>
-      <span class="cp-text">
-        Paso {{ store.currentStep }} de {{ totalSteps }} · <strong>{{ stepLabel }}</strong>
-      </span>
+    <div class="ob-current-row">
+      <div class="ob-current-pill">
+        <span class="cp-eyebrow"><i class="fa-solid fa-bolt" /> Diagnóstico</span>
+        <span class="cp-text">
+          Paso {{ store.currentStep }} de {{ totalSteps }} · <strong>{{ stepLabel }}</strong>
+        </span>
+      </div>
+
+      <div v-if="store.tiendas.length > 0" class="ob-tienda-pill">
+        <span class="tp-eyebrow"><i class="fa-solid fa-store" /> Diagnóstico para</span>
+        <select
+          class="tp-select"
+          :value="store.activeTiendaId"
+          @change="(e) => store.setActiveTienda((e.target as HTMLSelectElement).value)"
+        >
+          <option v-for="t in store.tiendas" :key="t.id" :value="t.id">
+            {{ t.name }}{{ t.isMain ? ' · Principal' : '' }}
+          </option>
+        </select>
+      </div>
+      <div v-else class="ob-tienda-pill new">
+        <span class="tp-eyebrow"><i class="fa-solid fa-lightbulb" /> Nuevo proyecto</span>
+        <span class="tp-text">Crearemos tu primera tienda al terminar</span>
+      </div>
     </div>
 
     <main class="ob-stage">
@@ -312,17 +331,59 @@ function jumpTo(n: number) {
   }
 }
 
-.ob-current-pill {
+.ob-current-row {
   position: relative; z-index: 2;
-  align-self: center;
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+.ob-current-pill {
   display: inline-flex; align-items: center; gap: 10px;
   background: white;
   padding: 8px 14px;
   border-radius: 999px;
   box-shadow: 0 8px 24px rgba($primary-dark, 0.08);
   border: 1px solid rgba($primary-dark, 0.04);
-  margin-top: 16px;
 }
+.ob-tienda-pill {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: white;
+  padding: 6px 10px 6px 14px;
+  border-radius: 999px;
+  box-shadow: 0 8px 24px rgba($primary-dark, 0.08);
+  border: 1px solid rgba($primary, 0.18);
+  &.new {
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.12), white);
+    border-color: rgba(245, 158, 11, 0.4);
+    padding: 8px 14px;
+    .tp-eyebrow { color: #b45309;
+      i { color: #f59e0b; }
+    }
+  }
+}
+.tp-eyebrow {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 0.62rem; font-weight: 800; letter-spacing: 0.6px; text-transform: uppercase;
+  color: $primary;
+  background: rgba($primary, 0.1);
+  padding: 3px 8px; border-radius: 999px;
+  i { font-size: 0.7rem; }
+}
+.ob-tienda-pill.new .tp-eyebrow { background: rgba(245, 158, 11, 0.18); }
+.tp-select {
+  font-family: $font-principal; font-weight: 700; font-size: 0.82rem;
+  color: $primary-dark;
+  border: none; background: transparent;
+  outline: none; cursor: pointer;
+  padding: 4px 4px 4px 0;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'><path fill='%232094D2' d='M6 7L0 1l1.5-1L6 4.5 10.5 0 12 1z'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 4px center;
+  padding-right: 18px;
+}
+.tp-text { font-size: 0.82rem; font-weight: 700; color: $primary-dark; }
 .cp-eyebrow {
   display: inline-flex; align-items: center; gap: 4px;
   font-size: 0.62rem; font-weight: 800; letter-spacing: 0.6px; text-transform: uppercase;

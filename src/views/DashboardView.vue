@@ -97,8 +97,18 @@ async function newAnalysis() {
     <div v-if="store.results" :class="['dashboard', { entered }]">
       <header class="dash-head">
         <div>
-          <h1 class="dash-title"><i class="fa-solid fa-chart-pie" /> Diagnóstico financiero</h1>
-          <p class="dash-sub">Resultado de tu onboarding. Conserva tu semáforo y KPIs principales.</p>
+          <h1 class="dash-title">
+            <i class="fa-solid fa-chart-pie" /> Diagnóstico financiero
+            <span v-if="store.activeTienda" class="dash-tienda">
+              <i class="fa-solid fa-store" />
+              {{ store.activeTienda.name }}
+            </span>
+          </h1>
+          <p class="dash-sub">
+            Resultado del diagnóstico
+            <span v-if="store.activeTienda"> para <strong>{{ store.activeTienda.name }}</strong></span>.
+            Cambia de tienda en el sidebar para ver otro diagnóstico.
+          </p>
         </div>
         <button v-if="!userStore.isAuthenticated" class="topbar-btn ghost" @click="goLogin">
           <i class="fa-solid fa-right-to-bracket" /> Iniciar sesión
@@ -247,10 +257,20 @@ async function newAnalysis() {
 }
 .dash-title {
   margin: 0; font-size: 1.3rem; font-weight: 800; color: $primary-dark;
-  display: inline-flex; align-items: center; gap: 10px;
-  i { color: $primary; }
+  display: inline-flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  > i:first-child { color: $primary; }
 }
-.dash-sub { margin: 2px 0 0; color: $text-secondary; font-size: 0.9rem; }
+.dash-tienda {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 0.78rem; font-weight: 700;
+  background: linear-gradient(135deg, rgba($primary, 0.12), rgba($secondary, 0.12));
+  color: $primary;
+  padding: 5px 10px; border-radius: 999px;
+  i { font-size: 0.75rem; }
+}
+.dash-sub { margin: 2px 0 0; color: $text-secondary; font-size: 0.9rem; line-height: 1.5;
+  strong { color: $primary-dark; }
+}
 .topbar-btn.ghost {
   display: inline-flex; align-items: center; gap: 6px;
   background: rgba($primary, 0.08); color: $primary;

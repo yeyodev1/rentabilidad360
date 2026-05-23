@@ -137,7 +137,13 @@ export const useOnboardingStore = defineStore('onboarding', () => {
   const monthlyClients = ref<number | null>(saved?.monthlyClients ?? null)
   const rawMaterialPercent = ref(saved?.rawMaterialPercent ?? 30)
   const monthlyRent = ref<number | null>(saved?.monthlyRent ?? null)
-  const results = ref<AnalysisResults | null>(saved?.results ?? null)
+  const diagnostics = ref<Record<string, AnalysisResults>>(
+    saved?.diagnostics && typeof saved.diagnostics === 'object' ? saved.diagnostics : {},
+  )
+  // Legacy single-result migration
+  if (saved?.results && !Object.keys(diagnostics.value).length) {
+    diagnostics.value['__legacy__'] = saved.results
+  }
   const currentStep = ref(saved?.currentStep ?? 1)
   const showDashboard = ref(saved?.showDashboard ?? false)
 
@@ -149,6 +155,16 @@ export const useOnboardingStore = defineStore('onboarding', () => {
       const main = defaultTienda(projectName.value || 'Sucursal Principal', businessType.value)
       tiendas.value.push(main)
       activeTiendaId.value = main.id
+      // Migrate legacy diagnostic into the first tienda
+      if (diagnostics.value['__legacy__']) {
+        diagnostics.value = {
+          ...diagnostics.value,
+          [main.id]: diagnostics.value['__legacy__'],
+        }
+        const { __legacy__, ...rest } = diagnostics.value
+        void __legacy__
+        diagnostics.value = rest
+      }
     } else if (!activeTiendaId.value || !tiendas.value.find((t) => t.id === activeTiendaId.value)) {
       activeTiendaId.value = tiendas.value[0].id
     }
@@ -157,6 +173,18 @@ export const useOnboardingStore = defineStore('onboarding', () => {
   const activeTienda = computed<Tienda | null>(() =>
     tiendas.value.find((t) => t.id === activeTiendaId.value) ?? tiendas.value[0] ?? null,
   )
+
+  const results = computed<AnalysisResults | null>(() => {
+    if (activeTienda.value && diagnostics.value[activeTienda.value.id]) {
+      return diagnostics.value[activeTienda.value.id]
+    }
+    if (diagnostics.value['__legacy__']) return diagnostics.value['__legacy__']
+    return null
+  })
+
+  const hasAnyDiagnostic = computed(() => Object.keys(diagnostics.value).length > 0)
+
+  const diagnosedTiendaIds = computed(() => Object.keys(diagnostics.value).filter((k) => k !== '__legacy__'))
 
   function addTienda(partial?: Partial<Tienda>): Tienda {
     const t: Tienda = {
@@ -284,8 +312,14 @@ export const useOnboardingStore = defineStore('onboarding', () => {
   }
 
   function generateDiagnosis() {
-    results.value = calculate()
     ensureMainTienda()
+    const r = calculate()
+    const tienda = activeTienda.value
+    if (tienda) {
+      diagnostics.value = { ...diagnostics.value, [tienda.id]: r }
+    } else {
+      diagnostics.value = { ...diagnostics.value, __legacy__: r }
+    }
   }
 
   function reset() {
@@ -298,12 +332,22 @@ export const useOnboardingStore = defineStore('onboarding', () => {
     monthlyClients.value = null
     rawMaterialPercent.value = 30
     monthlyRent.value = null
-    results.value = null
+    diagnostics.value = {}
     currentStep.value = 1
     showDashboard.value = false
     tiendas.value = []
     activeTiendaId.value = null
     localStorage.removeItem(STORAGE_KEY)
+  }
+
+  function resetDiagnosticForActive() {
+    const tienda = activeTienda.value
+    if (!tienda) return
+    const next = { ...diagnostics.value }
+    delete next[tienda.id]
+    diagnostics.value = next
+    currentStep.value = 1
+    showDashboard.value = false
   }
 
   // Bootstrap default tienda if data exists already
@@ -326,6 +370,7 @@ export const useOnboardingStore = defineStore('onboarding', () => {
       showDashboard: showDashboard.value,
       tiendas: tiendas.value,
       activeTiendaId: activeTiendaId.value,
+      diagnostics: diagnostics.value,
     }),
     (state) => saveState(state),
     { deep: true }
@@ -345,7 +390,11 @@ export const useOnboardingStore = defineStore('onboarding', () => {
     monthlyClients,
     rawMaterialPercent,
     monthlyRent,
+    diagnostics,
     results,
+    hasAnyDiagnostic,
+    diagnosedTiendaIds,
+    resetDiagnosticForActive,
     currentStep,
     showDashboard,
     canProceedStep1,
