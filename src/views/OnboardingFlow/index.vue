@@ -234,7 +234,7 @@ onMounted(checkExisting)
             <Step6Equipos v-else-if="currentStep === 6" v-model="stepData[6]" />
             <Step7CostosFijos v-else-if="currentStep === 7" v-model="stepData[7]" />
             <Step8POS v-else-if="currentStep === 8" v-model="stepData[8]" />
-            <Step9Alertas v-else-if="currentStep === 9" v-model="stepData[9]" />
+            <Step9Alertas v-else-if="currentStep === 9" v-model="stepData[9]" :country="stepData[1]?.country || ''" />
             <Step10Finalizar v-else-if="currentStep === 10" />
           </div>
         </Transition>
