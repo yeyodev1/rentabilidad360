@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import AppShell from '@/layout/AppShell.vue'
-import { useOnboardingStore, type Tienda, type CurrencyCode, CURRENCY_SYMBOLS, PAIN_POINTS } from '@/stores/onboarding'
+import { onboardingService } from '@/services/onboardingService'
+import { workspaceService } from '@/services/workspaceService'
+import { useOnboardingStore, type Tienda } from '@/stores/onboarding'
 import { useUserStore } from '@/stores/user'
 import { useUIStore } from '@/stores/ui'
 
@@ -10,41 +12,85 @@ const store = useOnboardingStore()
 const userStore = useUserStore()
 const ui = useUIStore()
 
+const editing = ref(false)
+const loading = ref(true)
+const saving = ref(false)
+const loadError = ref(false)
+
+const editForm = ref({
+  legalName: '',
+  commercialName: '',
+  ruc: '',
+  country: '',
+  city: '',
+})
+
+const hasData = computed(() => !!editForm.value?.legalName)
+
 onMounted(() => {
   userStore.hydrate()
   document.title = 'Workspace · Rentabilidad360'
+  loadWorkspace()
 })
 
-// === Workspace form ===
-const projectName = ref(store.projectName)
-const currency = ref<CurrencyCode>(store.currency)
-const painPoints = ref<string[]>([...store.painPoints])
-
-watch(() => store.projectName, (v) => { projectName.value = v })
-watch(() => store.currency, (v) => { currency.value = v })
-
-const currencies: { code: CurrencyCode; label: string }[] = [
-  { code: 'USD', label: 'USD' },
-  { code: 'MXN', label: 'MXN' },
-  { code: 'EUR', label: 'EUR' },
-  { code: 'COP', label: 'COP' },
-]
-
-function togglePain(id: string) {
-  const idx = painPoints.value.indexOf(id)
-  if (idx >= 0) painPoints.value.splice(idx, 1)
-  else painPoints.value.push(id)
+async function loadWorkspace() {
+  loading.value = true
+  loadError.value = false
+  const timeout = setTimeout(() => {
+    loading.value = false
+    loadError.value = true
+  }, 8000)
+  try {
+    if (userStore.workspaceIds.length && !userStore.workspaceName) {
+      await userStore.fetchWorkspace()
+    }
+    const res = await workspaceService.getCurrentWorkspace()
+    const ws = res.data?.workspace
+    if (ws) {
+      editForm.value = {
+        legalName: ws.legalName || '',
+        commercialName: ws.commercialName || '',
+        ruc: ws.ruc || '',
+        country: ws.country || '',
+        city: ws.city || '',
+      }
+      userStore.workspaceName = ws.commercialName || ws.legalName
+      userStore.workspaceRuc = ws.ruc
+    }
+    loadError.value = false
+  } catch {
+    loadError.value = true
+  }
+  clearTimeout(timeout)
+  loading.value = false
 }
 
-function saveWorkspace() {
-  if (!projectName.value.trim()) {
-    ui.showToast({ title: 'El nombre del workspace es obligatorio', tone: 'warning' })
+function startEditing() {
+  editing.value = true
+}
+
+function cancelEditing() {
+  editing.value = false
+  loadWorkspace()
+}
+
+async function saveWorkspace() {
+  if (!editForm.value.legalName.trim() || !editForm.value.ruc.trim()) {
+    ui.showToast({ title: 'Nombre legal y RUC son obligatorios', tone: 'warning' })
     return
   }
-  store.projectName = projectName.value.trim()
-  store.currency = currency.value
-  store.painPoints = painPoints.value as any
-  ui.showToast({ title: 'Workspace actualizado', tone: 'success', icon: 'fa-solid fa-circle-check' })
+  saving.value = true
+  try {
+    await onboardingService.saveStep(1, editForm.value)
+    userStore.workspaceName = editForm.value.commercialName || editForm.value.legalName
+    userStore.workspaceRuc = editForm.value.ruc
+    editing.value = false
+    ui.showToast({ title: 'Workspace actualizado', tone: 'success', icon: 'fa-solid fa-circle-check' })
+  } catch {
+    ui.showToast({ title: 'Error al guardar', tone: 'danger' })
+  } finally {
+    saving.value = false
+  }
 }
 
 // === Tienda editor drawer ===
@@ -163,10 +209,10 @@ function activate(t: Tienda) {
 }
 
 const totals = computed(() => ({
-  count: store.tiendas.length,
-  staff: store.tiendas.reduce((s, t) => s + (t.staff || 0), 0),
-  clients: store.tiendas.reduce((s, t) => s + (t.monthlyClients || 0), 0),
-  active: store.tiendas.filter((t) => t.status === 'active').length,
+  count: userStore.branches.length,
+  staff: 0,
+  clients: 0,
+  active: userStore.branches.length,
 }))
 
 function statusMeta(s: Tienda['status']) {
@@ -227,55 +273,90 @@ function statusMeta(s: Tienda['status']) {
       <section class="ws-grid">
         <article class="ws-card">
           <header class="card-head">
-            <h2><i class="fa-solid fa-gear" /> Datos del workspace</h2>
-            <p>Estos datos se aplican a todas tus tiendas.</p>
+            <div>
+              <h2><i class="fa-solid fa-building" /> Datos del workspace</h2>
+              <p>Información legal de tu empresa.</p>
+            </div>
+            <button v-if="!editing" class="btn ghost sm" type="button" @click="startEditing">
+              <i class="fa-solid fa-pen" /> Editar
+            </button>
           </header>
 
-          <div class="field">
-            <label class="lbl"><i class="fa-solid fa-tag" /> Nombre del workspace</label>
-            <input v-model="projectName" type="text" class="inp" placeholder="Ej: Grupo La Esquina" />
+          <div v-if="loading" class="ws-loading">
+            <div class="ws-spinner" />
+            <span>Cargando workspace…</span>
           </div>
 
-          <div class="field">
-            <label class="lbl"><i class="fa-solid fa-dollar-sign" /> Moneda principal</label>
-            <div class="cur-grid">
-              <button
-                v-for="c in currencies"
-                :key="c.code"
-                type="button"
-                :class="['cur-chip', { active: currency === c.code }]"
-                @click="currency = c.code"
-              >
-                <strong>{{ CURRENCY_SYMBOLS[c.code] }}</strong>
-                {{ c.label }}
-              </button>
-            </div>
-          </div>
-
-          <div class="field">
-            <label class="lbl"><i class="fa-solid fa-heart-pulse" /> Dolores activos</label>
-            <div class="pain-list">
-              <button
-                v-for="p in PAIN_POINTS"
-                :key="p.id"
-                type="button"
-                :class="['pain-chip', { active: painPoints.includes(p.id) }]"
-                @click="togglePain(p.id)"
-              >
-                <span class="p-ico"><i :class="p.icon" /></span>
-                <span class="p-txt">
-                  <strong>{{ p.title }}</strong>
-                  <em>{{ p.ctaLabel }}</em>
-                </span>
-                <i :class="painPoints.includes(p.id) ? 'fa-solid fa-circle-check' : 'fa-regular fa-circle'" />
-              </button>
-            </div>
-          </div>
-
-          <div class="card-actions">
-            <button class="btn primary" type="button" @click="saveWorkspace">
-              <i class="fa-solid fa-check" /> Guardar workspace
+          <div v-else-if="loadError && !hasData" class="ws-error">
+            <i class="fa-solid fa-circle-exclamation" />
+            <span>No se pudo cargar la información del workspace.</span>
+            <button class="btn ghost sm" type="button" @click="loadWorkspace">
+              <i class="fa-solid fa-rotate" /> Reintentar
             </button>
+          </div>
+
+          <div v-else-if="!editing && hasData" class="ws-detail">
+            <div class="ws-detail-row">
+              <span class="ws-detail-label"><i class="fa-solid fa-tag" /> Nombre legal</span>
+              <span class="ws-detail-value">{{ editForm?.legalName }}</span>
+            </div>
+            <div v-if="editForm?.commercialName" class="ws-detail-row">
+              <span class="ws-detail-label"><i class="fa-solid fa-store" /> Nombre comercial</span>
+              <span class="ws-detail-value">{{ editForm?.commercialName }}</span>
+            </div>
+            <div class="ws-detail-row">
+              <span class="ws-detail-label"><i class="fa-solid fa-receipt" /> RUC</span>
+              <span class="ws-detail-value mono">{{ editForm?.ruc }}</span>
+            </div>
+            <div class="ws-detail-row">
+              <span class="ws-detail-label"><i class="fa-solid fa-globe" /> País</span>
+              <span class="ws-detail-value">{{ editForm?.country || '—' }}</span>
+            </div>
+            <div class="ws-detail-row">
+              <span class="ws-detail-label"><i class="fa-solid fa-city" /> Ciudad</span>
+              <span class="ws-detail-value">{{ editForm?.city || '—' }}</span>
+            </div>
+          </div>
+
+          <div v-else class="ws-edit-form">
+            <div v-if="editForm" class="ws-edit-fields">
+              <div class="field">
+                <label class="lbl">Nombre legal <span class="req">*</span></label>
+                <input v-model="editForm.legalName" type="text" class="inp" placeholder="Ej: Restaurantes del Sur S.A." />
+              </div>
+              <div class="field">
+                <label class="lbl">Nombre comercial</label>
+                <input v-model="editForm.commercialName" type="text" class="inp" placeholder="Ej: La Casa del Ceviche" />
+              </div>
+              <div class="row-2">
+                <div class="field">
+                  <label class="lbl">RUC <span class="req">*</span></label>
+                  <input v-model="editForm.ruc" type="text" class="inp" placeholder="1234567890001" />
+                </div>
+                <div class="field">
+                  <label class="lbl">País</label>
+                  <select v-model="editForm.country" class="inp">
+                    <option value="">Seleccionar</option>
+                    <option value="Ecuador">Ecuador</option>
+                    <option value="Colombia">Colombia</option>
+                    <option value="Perú">Perú</option>
+                    <option value="México">México</option>
+                  </select>
+                </div>
+              </div>
+              <div class="field">
+                <label class="lbl">Ciudad</label>
+                <input v-model="editForm.city" type="text" class="inp" placeholder="Guayaquil" />
+              </div>
+              <div class="card-actions">
+                <button class="btn ghost" type="button" @click="cancelEditing">Cancelar</button>
+                <button class="btn primary" type="button" :disabled="saving" @click="saveWorkspace">
+                  <i v-if="saving" class="fa-solid fa-spinner fa-spin" />
+                  <i v-else class="fa-solid fa-check" />
+                  {{ saving ? 'Guardando…' : 'Guardar cambios' }}
+                </button>
+              </div>
+            </div>
           </div>
         </article>
 
@@ -599,44 +680,34 @@ function statusMeta(s: Tienda['status']) {
   &:focus { border-color: $primary; box-shadow: 0 0 0 3px rgba($primary, 0.12); }
 }
 
-.cur-grid {
-  display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
+.card-actions { display: flex; justify-content: flex-end; gap: 8px; }
+
+.ws-loading { display: flex; align-items: center; gap: 10px; padding: 20px 0; color: $text-secondary; font-size: 0.88rem; }
+.ws-spinner { width: 20px; height: 20px; border: 2px solid rgba($primary, 0.15); border-top-color: $primary; border-radius: 50%; animation: ws-spin 0.7s linear infinite; }
+@keyframes ws-spin { to { transform: rotate(360deg); } }
+
+.ws-error { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 20px 0; color: $text-secondary; font-size: 0.88rem; i { font-size: 1.3rem; color: $alert-warning; } }
+
+.ws-edit-fields { display: flex; flex-direction: column; gap: 14px; }
+
+.ws-detail { display: flex; flex-direction: column; gap: 0; }
+.ws-detail-row {
+  display: flex; align-items: center; padding: 10px 0;
+  border-bottom: 1px solid rgba($primary-dark, 0.04);
+  &:last-child { border-bottom: none; }
 }
-.cur-chip {
-  display: inline-flex; flex-direction: column; align-items: center; gap: 2px;
-  padding: 10px 8px; border-radius: 12px;
-  background: white; border: 2px solid rgba($primary-dark, 0.08);
-  font-family: $font-principal; font-weight: 700; font-size: 0.78rem;
-  color: $primary-dark; cursor: pointer; transition: all 0.2s;
-  strong { font-size: 1.05rem; color: $primary; }
-  &.active { border-color: $primary; background: rgba($primary, 0.06); }
+.ws-detail-label {
+  width: 140px; flex-shrink: 0;
+  font-size: 0.75rem; font-weight: 700; color: $text-secondary;
+  display: flex; align-items: center; gap: 6px;
+  i { color: $primary; width: 14px; text-align: center; }
+}
+.ws-detail-value {
+  font-size: 0.9rem; font-weight: 700; color: $primary-dark;
+  &.mono { font-family: monospace; letter-spacing: 1px; }
 }
 
-.pain-list { display: flex; flex-direction: column; gap: 8px; }
-.pain-chip {
-  display: grid; grid-template-columns: 38px 1fr 18px; gap: 10px; align-items: center;
-  padding: 10px 12px; border-radius: 12px; background: white;
-  border: 2px solid rgba($primary-dark, 0.08);
-  cursor: pointer; font-family: $font-principal; text-align: left;
-  &.active {
-    border-color: $primary; background: rgba($primary, 0.05);
-    .p-ico { background: $primary; color: white; }
-    > i:last-child { color: $primary; }
-  }
-  > i:last-child { color: rgba($primary-dark, 0.2); }
-}
-.p-ico {
-  width: 38px; height: 38px; border-radius: 11px;
-  background: rgba($primary, 0.1); color: $primary;
-  display: inline-flex; align-items: center; justify-content: center; font-size: 1rem;
-  transition: background 0.2s, color 0.2s;
-}
-.p-txt { display: inline-flex; flex-direction: column; line-height: 1.2;
-  strong { font-size: 0.85rem; font-weight: 700; color: $primary-dark; }
-  em { font-style: normal; font-size: 0.7rem; color: $text-secondary; }
-}
-
-.card-actions { display: flex; justify-content: flex-end; }
+.ws-edit-form { display: flex; flex-direction: column; gap: 14px; }
 
 /* ===== Tiendas list ===== */
 .tienda-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }

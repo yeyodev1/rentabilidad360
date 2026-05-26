@@ -2,7 +2,6 @@
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter, RouterLink, useRoute } from 'vue-router'
 import { useUserStore } from '@/stores/user'
-import { useOnboardingStore } from '@/stores/onboarding'
 import { useUIStore } from '@/stores/ui'
 import NavPreview from '@/components/NavPreview.vue'
 import WorkspaceSettingsModal from '@/components/WorkspaceSettingsModal.vue'
@@ -13,7 +12,6 @@ type NavKind = 'panel' | 'diagnostico' | 'sanitario' | 'checklists' | 'mantenimi
 const router = useRouter()
 const route = useRoute()
 const userStore = useUserStore()
-const store = useOnboardingStore()
 const ui = useUIStore()
 
 const sidebarOpen = ref(false)
@@ -34,14 +32,18 @@ function goWorkspace() {
 }
 
 function pickTienda(id: string) {
-  store.setActiveTienda(id)
-  tiendaMenuOpen.value = false
-  const t = store.tiendas.find((x) => x.id === id)
-  if (t) ui.showToast({ title: `Mostrando ${t.name}`, tone: 'info', icon: 'fa-solid fa-store' })
+  const t = userStore.branches.find((x) => x.id === id)
+  if (t) {
+    tiendaMenuOpen.value = false
+    ui.showToast({ title: `Mostrando ${t.name}`, tone: 'info', icon: 'fa-solid fa-store' })
+  }
 }
 
 onMounted(() => {
   userStore.hydrate()
+  if (userStore.isAuthenticated && userStore.workspaceIds.length && !userStore.workspaceName) {
+    userStore.fetchWorkspace()
+  }
   document.addEventListener('click', onDocClick)
 })
 
@@ -77,23 +79,23 @@ const nav = computed<NavItem[]>(() => [
     kind: 'panel',
     hint: 'Resumen y atajos',
   },
-  store.results
+  userStore.hasWorkspace
     ? {
         to: '/dashboard',
-        matches: ['/dashboard', '/diagnostico'],
+        matches: ['/dashboard', '/modulos'],
         icon: 'fa-solid fa-chart-pie',
-        label: 'Diagnóstico',
+        label: 'Dashboard',
         kind: 'diagnostico',
-        hint: 'EBITDA · margen · break-even',
+        hint: 'KPIs en tiempo real',
       }
     : {
-        to: '/diagnostico',
-        matches: ['/diagnostico', '/dashboard'],
+        to: '/onboarding',
+        matches: ['/onboarding'],
         icon: 'fa-solid fa-plug-circle-bolt',
         label: 'Diagnóstico',
         kind: 'diagnostico',
-        hint: 'Conecta tus datos reales',
-        ribbon: 'Conectar',
+        hint: 'Configurar mi negocio',
+        ribbon: 'Empezar',
       },
   { to: '/modulo/sanitario', matches: ['/modulo/sanitario'], icon: 'fa-solid fa-clipboard-list', label: 'Sanitario', kind: 'sanitario', hint: 'Semáforo Arcsa · checklist' },
   { to: '/modulo/checklists', matches: ['/modulo/checklists'], icon: 'fa-solid fa-clipboard-check', label: 'Checklists', kind: 'checklists' as NavKind, hint: 'Formato · revisión' },
@@ -164,14 +166,14 @@ function upgrade() {
           >
             <span class="ws-avatar">{{ initials }}</span>
             <div class="ws-meta">
-              <strong>{{ store.projectName || 'Mi restaurante' }}</strong>
-              <span>{{ store.tiendas.length }} {{ store.tiendas.length === 1 ? 'tienda' : 'tiendas' }} · Plan Free</span>
+              <strong>{{ userStore.workspaceName || 'Mi restaurante' }}</strong>
+              <span>{{ userStore.workspaceBranchCount }} {{ userStore.workspaceBranchCount === 1 ? 'sucursal' : 'sucursales' }} · Plan Free</span>
             </div>
             <i class="fa-solid fa-gear ws-gear" />
           </button>
 
           <div class="tienda-switcher">
-            <template v-if="store.tiendas.length > 0">
+            <template v-if="userStore.branches.length > 0">
               <button
                 type="button"
                 :class="['tienda-current', { open: tiendaMenuOpen }]"
@@ -184,33 +186,33 @@ function upgrade() {
                 </span>
                 <span class="tienda-text">
                   <em>Viendo datos de</em>
-                  <strong>{{ store.activeTienda?.name || 'Sin tienda' }}</strong>
+                  <strong>{{ userStore.mainBranch?.name || 'Sin sucursal' }}</strong>
                 </span>
                 <i class="fa-solid fa-chevron-down chev" />
               </button>
 
               <Transition name="menu">
                 <div v-if="tiendaMenuOpen" class="tienda-menu" role="menu" @click.stop>
-                  <span class="menu-label">Tiendas del workspace</span>
+                  <span class="menu-label">Sucursales del workspace</span>
                   <button
-                    v-for="t in store.tiendas"
-                    :key="t.id"
+                    v-for="b in userStore.branches"
+                    :key="b.id"
                     type="button"
-                    :class="['t-item', { active: store.activeTiendaId === t.id }]"
-                    @click="pickTienda(t.id)"
+                    :class="['t-item', { active: userStore.mainBranch?.id === b.id }]"
+                    @click="pickTienda(b.id)"
                   >
                     <span class="t-ico"><i class="fa-solid fa-store" /></span>
                     <span class="t-meta">
-                      <strong>{{ t.name }}</strong>
-                      <em>{{ t.city || (t.isMain ? 'Principal' : 'Sucursal') }}</em>
+                      <strong>{{ b.name }}</strong>
+                      <em>{{ b.address || (b.isMain ? 'Principal' : 'Sucursal') }}</em>
                     </span>
-                    <i v-if="store.activeTiendaId === t.id" class="fa-solid fa-circle-check ok" />
+                    <i v-if="userStore.mainBranch?.id === b.id" class="fa-solid fa-circle-check ok" />
                   </button>
 
                   <div class="menu-divider" />
 
                   <button type="button" class="t-action" @click="goWorkspace">
-                    <i class="fa-solid fa-gear" /> Gestionar tiendas
+                    <i class="fa-solid fa-gear" /> Gestionar sucursales
                   </button>
                 </div>
               </Transition>
@@ -221,12 +223,12 @@ function upgrade() {
               type="button"
               class="tienda-empty"
               @click="goWorkspace"
-              title="Agregar tu primera tienda"
+              title="Configurar sucursales"
             >
               <span class="tienda-flag empty"><i class="fa-solid fa-lightbulb" /></span>
               <span class="tienda-text">
-                <em>Modo proyecto · sin tienda</em>
-                <strong>Agregar primera tienda</strong>
+                <em>Sin sucursales</em>
+                <strong>Configurar</strong>
               </span>
               <i class="fa-solid fa-plus add" />
             </button>
@@ -293,16 +295,20 @@ function upgrade() {
             {{ activeNav?.label || 'Panel' }}
           </span>
           <span
-            v-if="store.activeTienda"
+            v-if="userStore.mainBranch"
             class="crumb-tienda"
-            :title="`Filtrando por ${store.activeTienda.name}`"
+            :title="`Sucursal: ${userStore.mainBranch.name}`"
           >
             <i class="fa-solid fa-store" />
-            {{ store.activeTienda.name }}
+            {{ userStore.mainBranch.name }}
           </span>
-          <span v-else class="crumb-tienda empty" title="Modo proyecto · sin tienda">
+          <span v-else-if="userStore.workspaceName" class="crumb-tienda" :title="userStore.workspaceName">
+            <i class="fa-solid fa-building" />
+            {{ userStore.workspaceName }}
+          </span>
+          <span v-else class="crumb-tienda empty" title="Sin workspace">
             <i class="fa-solid fa-lightbulb" />
-            Modo proyecto
+            Sin workspace
           </span>
         </div>
 
