@@ -87,7 +87,7 @@ async function saveWorkspace() {
     editing.value = false
     ui.showToast({ title: 'Workspace actualizado', tone: 'success', icon: 'fa-solid fa-circle-check' })
   } catch {
-    ui.showToast({ title: 'Error al guardar', tone: 'danger' })
+    ui.showToast({     title: 'Error al guardar', tone: 'error' })
   } finally {
     saving.value = false
   }
