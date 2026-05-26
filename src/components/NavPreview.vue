@@ -1,5 +1,5 @@
 <script setup lang="ts">
-defineProps<{ kind: 'panel' | 'diagnostico' | 'sanitario' | 'mantenimiento' | 'costeo' | 'horarios' }>()
+defineProps<{ kind: 'panel' | 'diagnostico' | 'sanitario' | 'checklists' | 'mantenimiento' | 'costeo' | 'horarios' }>()
 </script>
 
 <template>
@@ -50,6 +50,17 @@ defineProps<{ kind: 'panel' | 'diagnostico' | 'sanitario' | 'mantenimiento' | 'c
       <rect x="24" y="17" width="26" height="5" rx="1.5" fill="rgba(255,255,255,0.12)" />
       <rect x="24" y="25" width="30" height="5" rx="1.5" fill="rgba(43,187,146,0.5)" />
       <path d="M55 27 l1.5 1.5 l3 -3.5" stroke="#10b981" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+    </svg>
+
+    <!-- Checklists -->
+    <svg v-else-if="kind === 'checklists'" viewBox="0 0 64 40" preserveAspectRatio="xMidYMid meet">
+      <rect width="64" height="40" rx="6" fill="#0b1a36" />
+      <rect x="8" y="6" width="48" height="6" rx="1.5" fill="rgba(255,255,255,0.12)" />
+      <rect x="12" y="7.5" width="3" height="3" rx="0.5" fill="#10b981" />
+      <rect x="8" y="16" width="48" height="6" rx="1.5" fill="rgba(255,255,255,0.1)" />
+      <rect x="12" y="17.5" width="3" height="3" rx="0.5" fill="rgba(255,255,255,0.3)" />
+      <rect x="8" y="26" width="48" height="6" rx="1.5" fill="rgba(43,187,146,0.55)" />
+      <rect x="12" y="27.5" width="3" height="3" rx="0.5" fill="#10b981" />
     </svg>
 
     <!-- Mantenimiento -->

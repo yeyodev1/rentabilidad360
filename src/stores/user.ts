@@ -5,6 +5,7 @@ export interface UserState {
   name: string | null
   email: string | null
   isAuthenticated: boolean
+  workspaceIds: string[]
 }
 
 const USER_KEY = 'rentabilidad360_user'
@@ -23,7 +24,12 @@ export const useUserStore = defineStore('user', {
     name: null,
     email: null,
     isAuthenticated: false,
+    workspaceIds: [],
   }),
+
+  getters: {
+    hasWorkspace: (state) => state.workspaceIds.length > 0,
+  },
 
   actions: {
     hydrate() {
@@ -32,16 +38,18 @@ export const useUserStore = defineStore('user', {
       this.id = stored.id ?? null
       this.name = stored.name ?? null
       this.email = stored.email ?? null
+      this.workspaceIds = stored.workspaceIds ?? []
       this.isAuthenticated = !!token
     },
 
-    setUser(payload: { id?: string; name?: string; email?: string }) {
+    setUser(payload: { id?: string; name?: string; email?: string; workspaceIds?: string[] }) {
       if (payload.id !== undefined) this.id = payload.id
       if (payload.name !== undefined) this.name = payload.name
       if (payload.email !== undefined) this.email = payload.email
+      if (payload.workspaceIds !== undefined) this.workspaceIds = payload.workspaceIds
       this.isAuthenticated = true
       try {
-        localStorage.setItem(USER_KEY, JSON.stringify({ id: this.id, name: this.name, email: this.email }))
+        localStorage.setItem(USER_KEY, JSON.stringify({ id: this.id, name: this.name, email: this.email, workspaceIds: this.workspaceIds }))
       } catch { /* ignore */ }
     },
 
@@ -49,6 +57,7 @@ export const useUserStore = defineStore('user', {
       this.id = null
       this.name = null
       this.email = null
+      this.workspaceIds = []
       this.isAuthenticated = false
       try {
         localStorage.removeItem('access_token')

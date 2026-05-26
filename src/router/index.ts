@@ -9,9 +9,7 @@ const routes: Array<RouteRecordRaw> = [
   },
   {
     path: '/diagnostico',
-    name: 'Onboarding',
-    component: () => import('../views/OnboardingFlow.vue'),
-    meta: { title: 'Diagnóstico · Rentabilidad360' },
+    redirect: '/onboarding',
   },
   {
     path: '/login',
@@ -66,6 +64,42 @@ const routes: Array<RouteRecordRaw> = [
     name: 'ModuleSchedule',
     component: () => import('../views/ScheduleView.vue'),
     meta: { title: 'Optimización de Turnos · Rentabilidad360' },
+  },
+  {
+    path: '/onboarding',
+    name: 'Onboarding',
+    component: () => import('../views/OnboardingFlow.vue'),
+    meta: { title: 'Configuración · Rentabilidad360' },
+  },
+  {
+    path: '/modulo/checklists',
+    name: 'ModuleChecklists',
+    component: () => import('../views/ChecklistTemplatesView.vue'),
+    meta: { title: 'Checklists · Rentabilidad360', requiresAuth: true },
+  },
+  {
+    path: '/modulo/checklists/ejecutar/:templateId',
+    name: 'ChecklistExecute',
+    component: () => import('../views/ChecklistExecutionView.vue'),
+    meta: { title: 'Ejecutar Checklist · Rentabilidad360', requiresAuth: true },
+  },
+  {
+    path: '/modulo/checklists/revision',
+    name: 'ChecklistReview',
+    component: () => import('../views/ChecklistReviewView.vue'),
+    meta: { title: 'Revisión de Checklists · Rentabilidad360', requiresAuth: true },
+  },
+  {
+    path: '/modulo/mantenimiento/:id',
+    name: 'MaintenanceDetail',
+    component: () => import('../views/MaintenanceDetailView.vue'),
+    meta: { title: 'Ficha de Equipo · Rentabilidad360', requiresAuth: true },
+  },
+  {
+    path: '/modulo/horarios/optimizacion',
+    name: 'StaffOptimization',
+    component: () => import('../views/StaffOptimizationView.vue'),
+    meta: { title: 'Optimización de Personal · Rentabilidad360', requiresAuth: true },
   },
   {
     path: '/:catchAll(.*)',

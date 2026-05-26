@@ -24,7 +24,7 @@ async function handleLogin() {
     const res = await authService.login(email.value.trim(), password.value)
     localStorage.setItem('access_token', res.data.token)
     userStore.setUser(res.data.user)
-    router.replace('/modulos')
+    router.replace(res.data.hasWorkspace ? '/modulos' : '/onboarding')
   } catch (e: any) {
     error.value = e?.message || 'Credenciales inválidas. Intenta de nuevo.'
   } finally {

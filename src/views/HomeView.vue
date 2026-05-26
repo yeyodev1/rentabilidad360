@@ -14,8 +14,8 @@ onMounted(() => {
 
 const hasInProgress = computed(() => !!(store.projectName || store.businessType || store.painPoints.length))
 
-function startDemo() { router.push('/diagnostico') }
-function continueDemo() { router.push(store.results ? '/dashboard' : '/diagnostico') }
+function startDemo() { router.push('/onboarding') }
+function continueDemo() { router.push(store.results ? '/dashboard' : '/onboarding') }
 function goLogin() { router.push('/login') }
 function goRegister() { router.push('/register') }
 function scrollTo(id: string) {

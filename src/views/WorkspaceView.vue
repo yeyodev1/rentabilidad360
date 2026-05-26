@@ -543,12 +543,16 @@ function statusMeta(s: Tienda['status']) {
   display: flex; align-items: center; gap: 12px;
   background: white; border: 1px solid rgba($primary-dark, 0.05);
   border-radius: 16px; padding: 14px 16px;
-  span { font-size: 0.7rem; color: $text-secondary; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; display: block; }
-  strong { font-size: 1.2rem; font-weight: 800; color: $primary-dark; }
+  > div {
+    display: flex; flex-direction: column;
+    span { font-size: 0.7rem; color: $text-secondary; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; }
+    strong { font-size: 1.2rem; font-weight: 800; color: $primary-dark; line-height: 1.2; }
+  }
 }
 .stat-icon {
-  width: 38px; height: 38px; border-radius: 12px;
-  display: inline-flex; align-items: center; justify-content: center; font-size: 1rem;
+  width: 42px; height: 42px; border-radius: 12px;
+  display: flex; align-items: center; justify-content: center; font-size: 1.05rem;
+  flex-shrink: 0;
   &.primary { background: rgba($primary, 0.1); color: $primary; }
   &.secondary { background: rgba($secondary, 0.14); color: darken($secondary, 8%); }
   &.success { background: rgba($alert-success, 0.14); color: $alert-success; }

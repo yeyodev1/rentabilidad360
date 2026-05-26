@@ -13,7 +13,10 @@ interface AuthResponse {
     id: string
     name: string
     email: string
+    workspaceIds: string[]
   }
+  hasWorkspace?: boolean
+  workspaceCount?: number
 }
 
 class AuthService extends APIBase {

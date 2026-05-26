@@ -8,7 +8,7 @@ import NavPreview from '@/components/NavPreview.vue'
 import WorkspaceSettingsModal from '@/components/WorkspaceSettingsModal.vue'
 import AccountSettingsModal from '@/components/AccountSettingsModal.vue'
 
-type NavKind = 'panel' | 'diagnostico' | 'sanitario' | 'mantenimiento' | 'costeo' | 'horarios'
+type NavKind = 'panel' | 'diagnostico' | 'sanitario' | 'checklists' | 'mantenimiento' | 'costeo' | 'horarios'
 
 const router = useRouter()
 const route = useRoute()
@@ -96,6 +96,7 @@ const nav = computed<NavItem[]>(() => [
         ribbon: 'Conectar',
       },
   { to: '/modulo/sanitario', matches: ['/modulo/sanitario'], icon: 'fa-solid fa-clipboard-list', label: 'Sanitario', kind: 'sanitario', hint: 'Semáforo Arcsa · checklist' },
+  { to: '/modulo/checklists', matches: ['/modulo/checklists'], icon: 'fa-solid fa-clipboard-check', label: 'Checklists', kind: 'checklists' as NavKind, hint: 'Formato · revisión' },
   { to: '/modulo/mantenimiento', matches: ['/modulo/mantenimiento'], icon: 'fa-solid fa-screwdriver-wrench', label: 'Mantenimiento', kind: 'mantenimiento', hint: 'QR · fichas · alertas' },
   { to: '/modulo/costeo', matches: ['/modulo/costeo'], icon: 'fa-solid fa-sack-dollar', label: 'Costeo', kind: 'costeo', hint: 'Recetas · termómetro' },
   { to: '/modulo/horarios', matches: ['/modulo/horarios'], icon: 'fa-solid fa-calendar-week', label: 'Horarios', kind: 'horarios', hint: 'Turnos · horas críticas' },
