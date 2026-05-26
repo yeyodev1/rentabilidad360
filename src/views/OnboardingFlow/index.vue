@@ -2,9 +2,20 @@
 import { computed, ref, onMounted } from 'vue'
 import { useRouter, RouterLink } from 'vue-router'
 import { useUIStore } from '@/stores/ui'
-import TimePicker from '@/components/TimePicker.vue'
 import { useUserStore } from '@/stores/user'
 import { onboardingService } from '@/services/onboardingService'
+
+// Import Step Subcomponents
+import Step1Empresa from './components/Step1Empresa.vue'
+import Step2Sucursal from './components/Step2Sucursal.vue'
+import Step3Horarios from './components/Step3Horarios.vue'
+import Step4Recetas from './components/Step4Recetas.vue'
+import Step5Ingredientes from './components/Step5Ingredientes.vue'
+import Step6Equipos from './components/Step6Equipos.vue'
+import Step7CostosFijos from './components/Step7CostosFijos.vue'
+import Step8POS from './components/Step8POS.vue'
+import Step9Alertas from './components/Step9Alertas.vue'
+import Step10Finalizar from './components/Step10Finalizar.vue'
 
 const ui = useUIStore()
 const router = useRouter()
@@ -15,7 +26,6 @@ const currentStep = ref(1)
 const completedSteps = ref<number[]>([])
 const isSubmitting = ref(false)
 const direction = ref<'next' | 'prev'>('next')
-const step3tab = ref<'cocina' | 'atencion'>('cocina')
 
 const steps = [
   { n: 1, label: 'Empresa', icon: 'fa-building', desc: 'Datos legales del negocio', tag: 'Paso 1' },
@@ -33,9 +43,28 @@ const steps = [
 const stepData = ref<Record<number, any>>({
   1: { legalName: '', commercialName: '', ruc: '', country: '', city: '' },
   2: { name: '', address: '', phone: '' },
-  3: { cocina: Array.from({ length: 7 }, () => ({ open: '', close: '' })), atencion: Array.from({ length: 7 }, () => ({ open: '', close: '' })) },
-  4: { recipes: [] },
-  5: { ingredients: [] },
+  3: {
+    cocina: [
+      { open: '08:00', close: '22:00' },
+      { open: '08:00', close: '22:00' },
+      { open: '08:00', close: '22:00' },
+      { open: '08:00', close: '22:00' },
+      { open: '08:00', close: '22:00' },
+      { open: '', close: '' },
+      { open: '', close: '' }
+    ],
+    atencion: [
+      { open: '08:00', close: '22:00' },
+      { open: '08:00', close: '22:00' },
+      { open: '08:00', close: '22:00' },
+      { open: '08:00', close: '22:00' },
+      { open: '08:00', close: '22:00' },
+      { open: '', close: '' },
+      { open: '', close: '' }
+    ]
+  },
+  4: { recipes: [{ name: '', sellingPrice: null }] },
+  5: { ingredients: [{ name: '', unitOfMeasure: 'unidad', costPrice: null, wastePercentage: null }] },
   6: { equipment: [] },
   7: { rent: null, payroll: null, utilities: null, insurance: null, marketing: null },
   8: { provider: '', apiKey: '', webhookUrl: '' },
@@ -131,30 +160,6 @@ function jumpToStep(n: number) {
     currentStep.value = n
   }
 }
-
-function onStepDataUpdate(step: number, data: any) { stepData.value[step] = data }
-
-function updateHour(area: 'cocina' | 'atencion', dayIndex: number, field: 'open' | 'close', value: string) {
-  const d = stepData.value[3]
-  if (!d[area]) d[area] = Array.from({ length: 7 }, () => ({ open: '', close: '' }))
-  if (!d[area][dayIndex]) d[area][dayIndex] = { open: '', close: '' }
-  d[area][dayIndex][field] = value
-  onStepDataUpdate(3, { ...d })
-}
-
-function addItem(step: number, key: string, template: any) {
-  const d = stepData.value[step]
-  if (!d[key]) d[key] = []
-  d[key].push({ ...template })
-  onStepDataUpdate(step, { ...d })
-}
-function removeItem(step: number, key: string, i: number) {
-  const d = stepData.value[step]; d[key].splice(i, 1); onStepDataUpdate(step, { ...d })
-}
-function updateItem(step: number, key: string, i: number, field: string, value: any) {
-  const d = stepData.value[step]; if (d[key][i]) { d[key][i][field] = value; onStepDataUpdate(step, { ...d }) }
-}
-
 onMounted(checkExisting)
 </script>
 
@@ -221,239 +226,16 @@ onMounted(checkExisting)
       <div class="ob-main-body">
         <Transition :name="direction === 'next' ? 'slide-l' : 'slide-r'" mode="out-in">
           <div :key="'f-'+currentStep" class="ob-form-wrap">
-            <!-- STEP 1: Empresa -->
-            <div v-if="currentStep === 1" class="ob-fields">
-              <div class="ob-field">
-                <label>Nombre legal <span class="req">*</span></label>
-                <input v-model="stepData[1].legalName" @input="onStepDataUpdate(1, {...stepData[1]})" placeholder="Ej: Restaurantes del Sur S.A." />
-              </div>
-              <div class="ob-field">
-                <label>Nombre comercial</label>
-                <input v-model="stepData[1].commercialName" @input="onStepDataUpdate(1, {...stepData[1]})" placeholder="Ej: La Casa del Ceviche" />
-              </div>
-              <div class="ob-row">
-                <div class="ob-field">
-                  <label>RUC / ID Tributario <span class="req">*</span></label>
-                  <input v-model="stepData[1].ruc" @input="onStepDataUpdate(1, {...stepData[1]})" placeholder="1234567890001" />
-                </div>
-                <div class="ob-field">
-                  <label>País</label>
-                  <select v-model="stepData[1].country" @change="onStepDataUpdate(1, {...stepData[1]})">
-                    <option value="">Seleccionar</option>
-                    <option value="Ecuador">Ecuador</option>
-                    <option value="Colombia">Colombia</option>
-                    <option value="Perú">Perú</option>
-                    <option value="México">México</option>
-                  </select>
-                </div>
-              </div>
-              <div class="ob-field">
-                <label>Ciudad</label>
-                <input v-model="stepData[1].city" @input="onStepDataUpdate(1, {...stepData[1]})" placeholder="Guayaquil" />
-              </div>
-            </div>
-
-            <!-- STEP 2: Sucursal -->
-            <div v-else-if="currentStep === 2" class="ob-fields">
-              <div class="ob-field">
-                <label>Nombre de sucursal <span class="req">*</span></label>
-                <input v-model="stepData[2].name" @input="onStepDataUpdate(2, {...stepData[2]})" placeholder="Ej: Mall del Sol" />
-              </div>
-              <div class="ob-field">
-                <label>Dirección</label>
-                <input v-model="stepData[2].address" @input="onStepDataUpdate(2, {...stepData[2]})" placeholder="Av. Principal y calle 3" />
-              </div>
-              <div class="ob-field">
-                <label>Teléfono</label>
-                <input v-model="stepData[2].phone" @input="onStepDataUpdate(2, {...stepData[2]})" placeholder="+593 99 999 9999" type="tel" />
-              </div>
-            </div>
-
-            <!-- STEP 3: Horarios -->
-            <div v-else-if="currentStep === 3" class="ob-fields">
-              <div class="ob-tabs">
-                <button type="button" :class="['ob-tab', { active: step3tab === 'cocina' }]" @click="step3tab = 'cocina'">
-                  <i class="fa-solid fa-fire" /> Cocina
-                </button>
-                <button type="button" :class="['ob-tab', { active: step3tab === 'atencion' }]" @click="step3tab = 'atencion'">
-                  <i class="fa-solid fa-users" /> Atención
-                </button>
-              </div>
-
-              <div class="ob-schedule">
-                <div class="ob-sch-head">
-                  <span class="ob-sch-cell day">Día</span>
-                  <span class="ob-sch-cell">Apertura</span>
-                  <span class="ob-sch-cell sep" />
-                  <span class="ob-sch-cell">Cierre</span>
-                </div>
-                <div v-for="day in 7" :key="'h-'+day"
-                  :class="['ob-sch-row', { off: !stepData[3]?.[step3tab]?.[day-1]?.open }]">
-                  <span class="ob-sch-cell day">{{ ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'][day-1] }}</span>
-                  <div class="ob-sch-cell">
-                    <TimePicker :model-value="stepData[3]?.[step3tab]?.[day-1]?.open || ''" @update:model-value="updateHour(step3tab, day-1, 'open', $event)" />
-                  </div>
-                  <span class="ob-sch-cell sep"><i class="fa-solid fa-arrow-right" /></span>
-                  <div class="ob-sch-cell">
-                    <TimePicker :model-value="stepData[3]?.[step3tab]?.[day-1]?.close || ''" @update:model-value="updateHour(step3tab, day-1, 'close', $event)" />
-                  </div>
-                </div>
-              </div>
-              <p class="ob-hint">Deja vacío si el área no opera ese día.</p>
-            </div>
-
-            <!-- STEP 4: Recetas -->
-            <div v-else-if="currentStep === 4" class="ob-fields">
-              <div v-for="(r, i) in (stepData[4]?.recipes || [])" :key="i" class="ob-array-row">
-                <input v-model="r.name" placeholder="Nombre del plato" @input="updateItem(4, 'recipes', Number(i), 'name', ($event.target as HTMLInputElement).value)" />
-                <input v-model.number="r.sellingPrice" placeholder="PVP $" type="number" step="0.01" class="ob-sm" @input="updateItem(4, 'recipes', Number(i), 'sellingPrice', parseFloat(($event.target as HTMLInputElement).value || '0'))" />
-                <button class="ob-rm" @click="removeItem(4, 'recipes', Number(i))"><i class="fa-solid fa-xmark" /></button>
-              </div>
-              <button class="ob-add" @click="addItem(4, 'recipes', { name: '', sellingPrice: null })">
-                <i class="fa-solid fa-plus" /> Agregar plato
-              </button>
-            </div>
-
-            <!-- STEP 5: Ingredientes -->
-            <div v-else-if="currentStep === 5" class="ob-fields">
-              <div v-for="(ing, i) in (stepData[5]?.ingredients || [])" :key="i" class="ob-array-row">
-                <input v-model="ing.name" placeholder="Nombre" @input="updateItem(5, 'ingredients', Number(i), 'name', ($event.target as HTMLInputElement).value)" />
-                <select v-model="ing.unitOfMeasure" class="ob-sm" @change="updateItem(5, 'ingredients', Number(i), 'unitOfMeasure', ($event.target as HTMLSelectElement).value)">
-                  <option value="kg">Kg</option>
-                  <option value="l">L</option>
-                  <option value="unidad">Unidad</option>
-                </select>
-                <input v-model.number="ing.costPrice" placeholder="Costo" type="number" step="0.01" class="ob-sm" @input="updateItem(5, 'ingredients', Number(i), 'costPrice', parseFloat(($event.target as HTMLInputElement).value || '0'))" />
-                <input v-model.number="ing.wastePercentage" placeholder="Merma %" type="number" min="0" max="100" class="ob-xs" @input="updateItem(5, 'ingredients', Number(i), 'wastePercentage', parseFloat(($event.target as HTMLInputElement).value || '0'))" />
-                <button class="ob-rm" @click="removeItem(5, 'ingredients', Number(i))"><i class="fa-solid fa-xmark" /></button>
-              </div>
-              <button class="ob-add" @click="addItem(5, 'ingredients', { name: '', unitOfMeasure: 'unidad', costPrice: null, wastePercentage: null })">
-                <i class="fa-solid fa-plus" /> Agregar ingrediente
-              </button>
-            </div>
-
-            <!-- STEP 6: Equipos -->
-            <div v-else-if="currentStep === 6" class="ob-fields">
-              <div v-for="(eq, i) in (stepData[6]?.equipment || [])" :key="i" class="ob-array-row">
-                <input v-model="eq.name" placeholder="Nombre" @input="updateItem(6, 'equipment', Number(i), 'name', ($event.target as HTMLInputElement).value)" />
-                <input v-model="eq.brand" placeholder="Marca" class="ob-sm" @input="updateItem(6, 'equipment', Number(i), 'brand', ($event.target as HTMLInputElement).value)" />
-                <input v-model="eq.purchaseDate" type="date" class="ob-sm" @change="updateItem(6, 'equipment', Number(i), 'purchaseDate', ($event.target as HTMLInputElement).value)" />
-                <input v-model.number="eq.historicalCost" placeholder="Costo $" type="number" class="ob-sm" @input="updateItem(6, 'equipment', Number(i), 'historicalCost', parseFloat(($event.target as HTMLInputElement).value || '0'))" />
-                <button class="ob-rm" @click="removeItem(6, 'equipment', Number(i))"><i class="fa-solid fa-xmark" /></button>
-              </div>
-              <button class="ob-add" @click="addItem(6, 'equipment', { name: '', brand: '', purchaseDate: '', historicalCost: null, usefulLife: null, maintenanceIntervalDays: null })">
-                <i class="fa-solid fa-plus" /> Agregar equipo
-              </button>
-              <p class="ob-hint">La depreciación y ciclos de mantenimiento se calculan automáticamente.</p>
-            </div>
-
-            <!-- STEP 7: Costos Fijos -->
-            <div v-else-if="currentStep === 7" class="ob-fields">
-              <div class="ob-field">
-                <label>Alquiler <span class="req">*</span></label>
-                <input v-model.number="stepData[7].rent" type="number" step="0.01" placeholder="0.00" @input="onStepDataUpdate(7, {...stepData[7]})" />
-              </div>
-              <div class="ob-row">
-                <div class="ob-field">
-                  <label>Nómina administrativa</label>
-                  <input v-model.number="stepData[7].payroll" type="number" step="0.01" placeholder="0.00" @input="onStepDataUpdate(7, {...stepData[7]})" />
-                </div>
-                <div class="ob-field">
-                  <label>Servicios básicos</label>
-                  <input v-model.number="stepData[7].utilities" type="number" step="0.01" placeholder="0.00" @input="onStepDataUpdate(7, {...stepData[7]})" />
-                </div>
-              </div>
-              <div class="ob-row">
-                <div class="ob-field">
-                  <label>Seguros</label>
-                  <input v-model.number="stepData[7].insurance" type="number" step="0.01" placeholder="0.00" @input="onStepDataUpdate(7, {...stepData[7]})" />
-                </div>
-                <div class="ob-field">
-                  <label>Marketing</label>
-                  <input v-model.number="stepData[7].marketing" type="number" step="0.01" placeholder="0.00" @input="onStepDataUpdate(7, {...stepData[7]})" />
-                </div>
-              </div>
-            </div>
-
-            <!-- STEP 8: POS -->
-            <div v-else-if="currentStep === 8" class="ob-fields">
-              <div class="ob-field">
-                <label>Proveedor POS</label>
-                <select v-model="stepData[8].provider" @change="onStepDataUpdate(8, {...stepData[8]})">
-                  <option value="">Seleccionar…</option>
-                  <option value="clover">Clover</option>
-                  <option value="square">Square</option>
-                  <option value="tu_mesero">Tu Mesero</option>
-                  <option value="otros">Otros</option>
-                </select>
-              </div>
-              <div class="ob-field">
-                <label>API Key</label>
-                <input v-model="stepData[8].apiKey" type="password" placeholder="••••••••" @input="onStepDataUpdate(8, {...stepData[8]})" />
-              </div>
-              <div class="ob-field">
-                <label>Webhook URL</label>
-                <input v-model="stepData[8].webhookUrl" type="url" placeholder="https://…" @input="onStepDataUpdate(8, {...stepData[8]})" />
-              </div>
-              <p class="ob-hint">Puedes saltar este paso y configurarlo después desde el panel.</p>
-            </div>
-
-            <!-- STEP 9: Alertas -->
-            <div v-else-if="currentStep === 9" class="ob-fields">
-              <div class="ob-subsection">
-                <h3 class="ob-subtitle"><i class="fa-solid fa-bell" /> Canales de notificación</h3>
-                <div class="ob-tog">
-                  <span><i class="fa-brands fa-whatsapp" /> WhatsApp</span>
-                  <label class="tg"><input type="checkbox" v-model="stepData[9].whatsappEnabled" @change="onStepDataUpdate(9, {...stepData[9]})" /><span class="tg-slider" /></label>
-                </div>
-                <div class="ob-tog">
-                  <span><i class="fa-solid fa-envelope" /> Email</span>
-                  <label class="tg"><input type="checkbox" v-model="stepData[9].emailEnabled" @change="onStepDataUpdate(9, {...stepData[9]})" /><span class="tg-slider" /></label>
-                </div>
-                <div class="ob-tog">
-                  <span><i class="fa-solid fa-mobile-screen-button" /> Push</span>
-                  <label class="tg"><input type="checkbox" v-model="stepData[9].pushEnabled" @change="onStepDataUpdate(9, {...stepData[9]})" /><span class="tg-slider" /></label>
-                </div>
-              </div>
-              <div class="ob-subsection">
-                <h3 class="ob-subtitle"><i class="fa-solid fa-triangle-exclamation" /> Tipos de alerta</h3>
-                <div class="ob-tog">
-                  <span><i class="fa-solid fa-clipboard-list" /> Checklist</span>
-                  <label class="tg"><input type="checkbox" v-model="stepData[9].checklistAlerts" @change="onStepDataUpdate(9, {...stepData[9]})" /><span class="tg-slider" /></label>
-                </div>
-                <div class="ob-tog">
-                  <span><i class="fa-solid fa-chart-line" /> Caída de margen</span>
-                  <label class="tg"><input type="checkbox" v-model="stepData[9].marginAlerts" @change="onStepDataUpdate(9, {...stepData[9]})" /><span class="tg-slider" /></label>
-                </div>
-                <div class="ob-tog">
-                  <span><i class="fa-solid fa-screwdriver-wrench" /> Mantenimiento</span>
-                  <label class="tg"><input type="checkbox" v-model="stepData[9].maintenanceAlerts" @change="onStepDataUpdate(9, {...stepData[9]})" /><span class="tg-slider" /></label>
-                </div>
-              </div>
-              <div class="ob-row">
-                <div class="ob-field">
-                  <label>Número WhatsApp</label>
-                  <input v-model="stepData[9].whatsappNumber" placeholder="+593 99 999 9999" @input="onStepDataUpdate(9, {...stepData[9]})" />
-                </div>
-                <div class="ob-field">
-                  <label>Email notificaciones</label>
-                  <input v-model="stepData[9].emailAddress" type="email" placeholder="correo@ejemplo.com" @input="onStepDataUpdate(9, {...stepData[9]})" />
-                </div>
-              </div>
-            </div>
-
-            <!-- STEP 10: Finalizar -->
-            <div v-else-if="currentStep === 10" class="ob-fields ob-done">
-              <div class="ob-done-icon"><i class="fa-solid fa-circle-check" /></div>
-              <h2 class="ob-done-title">Todo listo</h2>
-              <p class="ob-done-desc">Tu restaurante está configurado. Accede al dashboard en tiempo real.</p>
-              <div class="ob-done-grid">
-                <div class="ob-done-item"><i class="fa-solid fa-chart-line" /> Dashboard en vivo</div>
-                <div class="ob-done-item"><i class="fa-solid fa-bell" /> Alertas automáticas</div>
-                <div class="ob-done-item"><i class="fa-solid fa-clipboard-check" /> Control de checklists</div>
-                <div class="ob-done-item"><i class="fa-solid fa-qrcode" /> QR de equipos</div>
-              </div>
-            </div>
+            <Step1Empresa v-if="currentStep === 1" v-model="stepData[1]" />
+            <Step2Sucursal v-else-if="currentStep === 2" v-model="stepData[2]" />
+            <Step3Horarios v-else-if="currentStep === 3" v-model="stepData[3]" />
+            <Step4Recetas v-else-if="currentStep === 4" v-model="stepData[4]" />
+            <Step5Ingredientes v-else-if="currentStep === 5" v-model="stepData[5]" />
+            <Step6Equipos v-else-if="currentStep === 6" v-model="stepData[6]" />
+            <Step7CostosFijos v-else-if="currentStep === 7" v-model="stepData[7]" />
+            <Step8POS v-else-if="currentStep === 8" v-model="stepData[8]" />
+            <Step9Alertas v-else-if="currentStep === 9" v-model="stepData[9]" />
+            <Step10Finalizar v-else-if="currentStep === 10" />
           </div>
         </Transition>
       </div>
@@ -797,4 +579,177 @@ onMounted(checkExisting)
   .ob-main-foot-left { min-width: 0; }
   .ob-btn { justify-content: center; }
 }
+
+/* ── Redesigned Premium Schedule UI ── */
+.ob-schedule-premium {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 10px;
+}
+.ob-sch-card {
+  background: white;
+  border: 1.5px solid rgba($primary-dark, 0.08);
+  border-radius: 16px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 4px 12px rgba($primary-dark, 0.02);
+
+  &.off {
+    background: rgba($primary-dark, 0.02);
+    border-color: rgba($primary-dark, 0.04);
+    opacity: 0.75;
+    .ob-sch-day-name {
+      color: $text-secondary;
+    }
+  }
+}
+.ob-sch-row-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.ob-sch-day-toggle {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 140px;
+}
+.ob-sch-day-name {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: $primary-dark;
+  min-width: 90px;
+}
+.ob-sch-controls {
+  flex: 1;
+  display: flex;
+  justify-content: flex-end;
+  min-width: 240px;
+}
+.ob-sch-inputs-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  justify-content: flex-end;
+}
+.time-input-group {
+  position: relative;
+  display: flex;
+  align-items: center;
+  background: #fafbfc;
+  border: 1.5px solid rgba($primary-dark, 0.1);
+  border-radius: 10px;
+  padding: 0 10px;
+  transition: all 0.2s;
+  
+  &:focus-within {
+    border-color: $primary;
+    background: white;
+    box-shadow: 0 0 0 3px rgba($primary, 0.1);
+  }
+}
+.icon-clock {
+  color: $primary;
+  font-size: 0.85rem;
+  margin-right: 6px;
+}
+.ob-time-input {
+  border: none;
+  background: transparent;
+  padding: 8px 0;
+  font-family: inherit;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: $primary-dark;
+  outline: none;
+  width: 70px;
+}
+.to-text {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: $text-secondary;
+}
+.ob-copy-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1.5px solid rgba($primary, 0.15);
+  border-radius: 10px;
+  background: rgba($primary, 0.04);
+  color: $primary;
+  font-family: inherit;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-left: 8px;
+
+  &:hover {
+    background: $primary;
+    color: white;
+    border-color: $primary;
+  }
+}
+.ob-sch-closed-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: $text-secondary;
+  background: rgba($primary-dark, 0.06);
+  padding: 6px 12px;
+  border-radius: 20px;
+}
+.ob-sch-timeline-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-top: 6px;
+  border-top: 1px dashed rgba($primary-dark, 0.06);
+}
+.ob-sch-timeline-hours {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.65rem;
+  color: $text-secondary;
+  font-weight: 600;
+  padding: 0 4px;
+}
+.ob-sch-timeline-track {
+  height: 20px;
+  background: #f1f3f7;
+  border-radius: 99px;
+  position: relative;
+  overflow: hidden;
+}
+.ob-sch-timeline-bar {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: linear-gradient(90deg, $primary, $secondary);
+  border-radius: 99px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba($primary, 0.2);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.bar-label {
+  font-size: 0.65rem;
+  color: white;
+  font-weight: 800;
+  letter-spacing: 0.2px;
+  pointer-events: none;
+  white-space: nowrap;
+}
 </style>
+

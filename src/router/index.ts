@@ -68,7 +68,7 @@ const routes: Array<RouteRecordRaw> = [
   {
     path: '/onboarding',
     name: 'Onboarding',
-    component: () => import('../views/OnboardingFlow.vue'),
+    component: () => import('../views/OnboardingFlow/index.vue'),
     meta: { title: 'Configuración · Rentabilidad360' },
   },
   {

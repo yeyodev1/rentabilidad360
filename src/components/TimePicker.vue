@@ -92,7 +92,7 @@ onBeforeUnmount(() => document.removeEventListener('click', onClickOutside))
             <div class="tp-col-list">
               <button v-for="h in hours" :key="h.value" type="button"
                 :class="['tp-opt', { active: h.value === selectedHour }]"
-                @click="selectHour(h.value); open = false">
+                @click="selectHour(h.value)">
                 {{ h.label }}
               </button>
             </div>
