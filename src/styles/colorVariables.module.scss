@@ -1,19 +1,59 @@
-// Brand colors - customize per project
-$primary: #2094D2;
-$primary-dark: #010D27;
-$primary-light: #fefefe;
-$secondary: #2BBB92;
+// ═══════════════════════════════════════════
+// Rentabilidad360 — Design Tokens 2026
+// Paleta "Sol y Mar"
+// ═══════════════════════════════════════════
 
-$white: #fefefe;
-$text-light: #fefefe;
-$text-secondary: #6b7280;
+// ── Brand ──
+$primary: #0F766E;
+$primary-dark: #0C1222;
+$primary-light: #14B8A6;
+$primary-bg: rgba($primary, 0.08);
+$primary-gradient: linear-gradient(135deg, #0F766E, #14B8A6);
 
-// Alert colors
-$alert-warning: #f59e0b;
-$alert-info: #3b82f6;
-$alert-success: #10b981;
-$alert-error: #ef4444;
-$alert-warning-bg: rgba($alert-warning, 0.1);
-$alert-info-bg: rgba($alert-info, 0.1);
+// ── Secondary (gradient partner) ──
+$secondary: #14B8A6;
+
+// ── Warm accent (restaurants) ──
+$accent: #F59E0B;
+$accent-dark: #D97706;
+$accent-light: #FCD34D;
+
+// ── Surfaces ──
+$white: #FFFFFF;
+$bg: #F0F5F4;
+$surface: #FFFFFF;
+$text: #1A2E35;
+$text-secondary: #6B7F8B;
+$text-light: #F0F5F4;
+$border: rgba(26, 46, 53, 0.08);
+$border-hover: rgba(26, 46, 53, 0.15);
+
+// ── Status / Alerts ──
+$alert-success: #10B981;
+$alert-warning: #F59E0B;
+$alert-error: #EF4444;
+$alert-info: #3B82F6;
+
 $alert-success-bg: rgba($alert-success, 0.1);
+$alert-warning-bg: rgba($alert-warning, 0.1);
 $alert-error-bg: rgba($alert-error, 0.1);
+$alert-info-bg: rgba($alert-info, 0.1);
+
+// ── Shadows ──
+$shadow-sm: 0 1px 3px rgba(12, 18, 34, 0.06);
+$shadow-md: 0 4px 12px rgba(12, 18, 34, 0.08);
+$shadow-lg: 0 12px 32px rgba(12, 18, 34, 0.12);
+$shadow-xl: 0 24px 60px rgba(12, 18, 34, 0.18);
+
+// ── Radius ──
+$radius-sm: 8px;
+$radius-md: 12px;
+$radius-lg: 16px;
+$radius-xl: 24px;
+$radius-full: 999px;
+
+// ── Breakpoints ──
+$bp-mobile: 480px;
+$bp-tablet: 768px;
+$bp-desktop: 1024px;
+$bp-wide: 1280px;

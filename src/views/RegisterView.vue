@@ -2,12 +2,11 @@
 import { ref } from 'vue'
 import { useRouter, RouterLink } from 'vue-router'
 import { authService } from '@/services/authService'
-import { useUserStore } from '@/stores/user'
 
 const router = useRouter()
-const userStore = useUserStore()
 
-const name = ref('')
+const firstName = ref('')
+const lastName = ref('')
 const email = ref('')
 const password = ref('')
 const loading = ref(false)
@@ -16,7 +15,7 @@ const showPwd = ref(false)
 
 async function handleRegister() {
   error.value = ''
-  if (!name.value.trim() || !email.value.trim() || !password.value) {
+  if (!firstName.value.trim() || !lastName.value.trim() || !email.value.trim() || !password.value) {
     error.value = 'Todos los campos son obligatorios'
     return
   }
@@ -27,15 +26,14 @@ async function handleRegister() {
   loading.value = true
   try {
     const res = await authService.register({
-      name: name.value.trim(),
+      firstName: firstName.value.trim(),
+      lastName: lastName.value.trim(),
       email: email.value.trim(),
       password: password.value,
     })
-    localStorage.setItem('access_token', res.data.token)
-    userStore.setUser(res.data.user)
-    router.replace('/modulos')
+    router.replace(`/verify?email=${encodeURIComponent(res.data.email)}`)
   } catch (e: any) {
-    error.value = e?.message || 'No pudimos crear tu cuenta. Intenta de nuevo.'
+    error.value = e?.response?.data?.message || e?.message || 'No pudimos crear tu cuenta. Intenta de nuevo.'
   } finally {
     loading.value = false
   }
@@ -62,16 +60,28 @@ async function handleRegister() {
       <p class="auth-sub">Crea tu cuenta gratis y desbloquea los módulos de cocina, costeo y horarios.</p>
 
       <form class="auth-form" @submit.prevent="handleRegister">
-        <label class="field">
-          <span class="field-label"><i class="fa-solid fa-user" /> Nombre</span>
-          <input
-            v-model="name"
-            type="text"
-            class="field-input"
-            placeholder="Tu nombre"
-            autocomplete="name"
-          />
-        </label>
+        <div class="field-row">
+          <label class="field">
+            <span class="field-label"><i class="fa-solid fa-user" /> Nombre</span>
+            <input
+              v-model="firstName"
+              type="text"
+              class="field-input"
+              placeholder="Ej. Juan"
+              autocomplete="given-name"
+            />
+          </label>
+          <label class="field">
+            <span class="field-label">Apellido</span>
+            <input
+              v-model="lastName"
+              type="text"
+              class="field-input"
+              placeholder="Ej. Pérez"
+              autocomplete="family-name"
+            />
+          </label>
+        </div>
 
         <label class="field">
           <span class="field-label"><i class="fa-solid fa-envelope" /> Email</span>
@@ -154,6 +164,7 @@ async function handleRegister() {
 .auth-title { font-size: 1.6rem; font-weight: 700; color: $primary-dark; margin: 4px 0 0; }
 .auth-sub { font-size: 0.9rem; color: $text-secondary; margin: 0 0 8px; line-height: 1.5; }
 .auth-form { display: flex; flex-direction: column; gap: 14px; }
+.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .field { display: flex; flex-direction: column; gap: 6px; }
 .field-label { font-size: 0.78rem; font-weight: 600; color: $primary-dark; display: inline-flex; align-items: center; gap: 6px; i { color: $primary; } }
 .field-input-wrap { position: relative; }
@@ -165,7 +176,7 @@ async function handleRegister() {
 }
 .field-toggle { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); border: none; background: transparent; color: $text-secondary; cursor: pointer; padding: 6px 8px; font-size: 0.95rem; }
 .form-error { display: inline-flex; align-items: center; gap: 6px; font-size: 0.82rem; color: $alert-error; background: rgba($alert-error, 0.08); border-radius: 10px; padding: 10px 12px; margin: 0; }
-.btn-submit { display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 15px; border: none; border-radius: 12px; font-family: $font-principal; font-weight: 700; font-size: 1rem; color: white; background: linear-gradient(135deg, $primary, #1678b0); cursor: pointer; box-shadow: 0 8px 22px rgba($primary, 0.3); transition: transform 0.2s; &:disabled { opacity: 0.85; cursor: progress; } &:not(:disabled):active { transform: scale(0.98); } }
+.btn-submit { display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 15px; border: none; border-radius: 12px; font-family: $font-principal; font-weight: 700; font-size: 1rem; color: white; background: linear-gradient(135deg, $primary, $secondary); cursor: pointer; box-shadow: 0 8px 22px rgba($primary, 0.3); transition: transform 0.2s; &:disabled { opacity: 0.85; cursor: progress; } &:not(:disabled):active { transform: scale(0.98); } }
 .auth-footer { text-align: center; font-size: 0.85rem; color: $text-secondary; margin: 4px 0 0; }
 .auth-link { color: $primary; font-weight: 700; display: inline-flex; align-items: center; gap: 4px; }
 </style>

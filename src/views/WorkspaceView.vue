@@ -607,7 +607,7 @@ function statusMeta(s: Tienda['status']) {
   &.sm { padding: 8px 12px; font-size: 0.8rem; }
 }
 .btn.primary {
-  background: linear-gradient(135deg, $primary, #1678b0); color: white;
+  background: linear-gradient(135deg, $primary, $secondary); color: white;
   box-shadow: 0 8px 20px rgba($primary, 0.28);
 }
 .btn.ghost {
@@ -851,7 +851,7 @@ function statusMeta(s: Tienda['status']) {
   em { font-style: normal; font-size: 0.78rem; color: $text-secondary; }
 
   &.primary {
-    background: linear-gradient(135deg, $primary, #1678b0);
+    background: linear-gradient(135deg, $primary, $secondary);
     color: white;
     box-shadow: 0 12px 26px rgba($primary, 0.3);
     transition: transform 0.2s;

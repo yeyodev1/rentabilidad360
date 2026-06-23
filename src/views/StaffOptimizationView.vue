@@ -2,6 +2,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import AppShell from '@/layout/AppShell.vue'
+import { staffService } from '@/services/staffService'
 
 interface ShiftSlot {
   id: string
@@ -52,80 +53,7 @@ const efficiency = computed(() => {
   return Math.round((1 - Math.abs(totalStaff.value - totalRequired.value) / totalRequired.value) * 100)
 })
 
-const demosShifts: ShiftSlot[] = [
-  { id: 's1', day: 'Lunes', time: '08:00 - 12:00', staffCount: 3, requiredStaff: 4, area: 'Cocina' },
-  { id: 's2', day: 'Lunes', time: '12:00 - 16:00', staffCount: 5, requiredStaff: 4, area: 'Cocina' },
-  { id: 's3', day: 'Lunes', time: '16:00 - 20:00', staffCount: 4, requiredStaff: 3, area: 'Cocina' },
-  { id: 's4', day: 'Lunes', time: '20:00 - 23:00', staffCount: 2, requiredStaff: 3, area: 'Cocina' },
-  { id: 's5', day: 'Lunes', time: '08:00 - 12:00', staffCount: 2, requiredStaff: 2, area: 'Atención' },
-  { id: 's6', day: 'Lunes', time: '12:00 - 16:00', staffCount: 4, requiredStaff: 3, area: 'Atención' },
-  { id: 's7', day: 'Lunes', time: '16:00 - 20:00', staffCount: 3, requiredStaff: 3, area: 'Atención' },
-  { id: 's8', day: 'Lunes', time: '20:00 - 23:00', staffCount: 1, requiredStaff: 2, area: 'Atención' },
-  { id: 's9', day: 'Martes', time: '08:00 - 12:00', staffCount: 3, requiredStaff: 3, area: 'Cocina' },
-  { id: 's10', day: 'Martes', time: '12:00 - 16:00', staffCount: 4, requiredStaff: 4, area: 'Cocina' },
-  { id: 's11', day: 'Martes', time: '16:00 - 20:00', staffCount: 3, requiredStaff: 3, area: 'Cocina' },
-  { id: 's12', day: 'Martes', time: '20:00 - 23:00', staffCount: 2, requiredStaff: 3, area: 'Cocina' },
-  { id: 's13', day: 'Martes', time: '08:00 - 12:00', staffCount: 2, requiredStaff: 2, area: 'Atención' },
-  { id: 's14', day: 'Martes', time: '12:00 - 16:00', staffCount: 3, requiredStaff: 3, area: 'Atención' },
-  { id: 's15', day: 'Martes', time: '16:00 - 20:00', staffCount: 3, requiredStaff: 3, area: 'Atención' },
-  { id: 's16', day: 'Martes', time: '20:00 - 23:00', staffCount: 2, requiredStaff: 2, area: 'Atención' },
-  { id: 's17', day: 'Miércoles', time: '08:00 - 12:00', staffCount: 3, requiredStaff: 3, area: 'Cocina' },
-  { id: 's18', day: 'Miércoles', time: '12:00 - 16:00', staffCount: 4, requiredStaff: 4, area: 'Cocina' },
-  { id: 's19', day: 'Miércoles', time: '16:00 - 20:00', staffCount: 3, requiredStaff: 3, area: 'Cocina' },
-  { id: 's20', day: 'Miércoles', time: '20:00 - 23:00', staffCount: 2, requiredStaff: 2, area: 'Cocina' },
-  { id: 's21', day: 'Miércoles', time: '08:00 - 12:00', staffCount: 2, requiredStaff: 2, area: 'Atención' },
-  { id: 's22', day: 'Miércoles', time: '12:00 - 16:00', staffCount: 3, requiredStaff: 3, area: 'Atención' },
-  { id: 's23', day: 'Miércoles', time: '16:00 - 20:00', staffCount: 3, requiredStaff: 3, area: 'Atención' },
-  { id: 's24', day: 'Miércoles', time: '20:00 - 23:00', staffCount: 1, requiredStaff: 2, area: 'Atención' },
-  { id: 's25', day: 'Jueves', time: '08:00 - 12:00', staffCount: 3, requiredStaff: 3, area: 'Cocina' },
-  { id: 's26', day: 'Jueves', time: '12:00 - 16:00', staffCount: 4, requiredStaff: 4, area: 'Cocina' },
-  { id: 's27', day: 'Jueves', time: '16:00 - 20:00', staffCount: 4, requiredStaff: 3, area: 'Cocina' },
-  { id: 's28', day: 'Jueves', time: '20:00 - 23:00', staffCount: 2, requiredStaff: 2, area: 'Cocina' },
-  { id: 's29', day: 'Jueves', time: '08:00 - 12:00', staffCount: 2, requiredStaff: 2, area: 'Atención' },
-  { id: 's30', day: 'Jueves', time: '12:00 - 16:00', staffCount: 3, requiredStaff: 3, area: 'Atención' },
-  { id: 's31', day: 'Jueves', time: '16:00 - 20:00', staffCount: 4, requiredStaff: 3, area: 'Atención' },
-  { id: 's32', day: 'Jueves', time: '20:00 - 23:00', staffCount: 1, requiredStaff: 2, area: 'Atención' },
-  { id: 's33', day: 'Viernes', time: '08:00 - 12:00', staffCount: 3, requiredStaff: 3, area: 'Cocina' },
-  { id: 's34', day: 'Viernes', time: '12:00 - 16:00', staffCount: 5, requiredStaff: 4, area: 'Cocina' },
-  { id: 's35', day: 'Viernes', time: '16:00 - 20:00', staffCount: 5, requiredStaff: 3, area: 'Cocina' },
-  { id: 's36', day: 'Viernes', time: '20:00 - 23:00', staffCount: 3, requiredStaff: 3, area: 'Cocina' },
-  { id: 's37', day: 'Viernes', time: '08:00 - 12:00', staffCount: 2, requiredStaff: 2, area: 'Atención' },
-  { id: 's38', day: 'Viernes', time: '12:00 - 16:00', staffCount: 4, requiredStaff: 3, area: 'Atención' },
-  { id: 's39', day: 'Viernes', time: '16:00 - 20:00', staffCount: 4, requiredStaff: 3, area: 'Atención' },
-  { id: 's40', day: 'Viernes', time: '20:00 - 23:00', staffCount: 2, requiredStaff: 2, area: 'Atención' },
-  { id: 's41', day: 'Sábado', time: '08:00 - 12:00', staffCount: 2, requiredStaff: 3, area: 'Cocina' },
-  { id: 's42', day: 'Sábado', time: '12:00 - 16:00', staffCount: 4, requiredStaff: 4, area: 'Cocina' },
-  { id: 's43', day: 'Sábado', time: '16:00 - 20:00', staffCount: 4, requiredStaff: 4, area: 'Cocina' },
-  { id: 's44', day: 'Sábado', time: '20:00 - 23:00', staffCount: 3, requiredStaff: 3, area: 'Cocina' },
-  { id: 's45', day: 'Sábado', time: '08:00 - 12:00', staffCount: 1, requiredStaff: 2, area: 'Atención' },
-  { id: 's46', day: 'Sábado', time: '12:00 - 16:00', staffCount: 3, requiredStaff: 3, area: 'Atención' },
-  { id: 's47', day: 'Sábado', time: '16:00 - 20:00', staffCount: 3, requiredStaff: 3, area: 'Atención' },
-  { id: 's48', day: 'Sábado', time: '20:00 - 23:00', staffCount: 2, requiredStaff: 2, area: 'Atención' },
-  { id: 's49', day: 'Domingo', time: '08:00 - 12:00', staffCount: 2, requiredStaff: 3, area: 'Cocina' },
-  { id: 's50', day: 'Domingo', time: '12:00 - 16:00', staffCount: 3, requiredStaff: 4, area: 'Cocina' },
-  { id: 's51', day: 'Domingo', time: '16:00 - 20:00', staffCount: 3, requiredStaff: 3, area: 'Cocina' },
-  { id: 's52', day: 'Domingo', time: '20:00 - 23:00', staffCount: 2, requiredStaff: 2, area: 'Cocina' },
-  { id: 's53', day: 'Domingo', time: '08:00 - 12:00', staffCount: 1, requiredStaff: 2, area: 'Atención' },
-  { id: 's54', day: 'Domingo', time: '12:00 - 16:00', staffCount: 2, requiredStaff: 3, area: 'Atención' },
-  { id: 's55', day: 'Domingo', time: '16:00 - 20:00', staffCount: 2, requiredStaff: 2, area: 'Atención' },
-  { id: 's56', day: 'Domingo', time: '20:00 - 23:00', staffCount: 1, requiredStaff: 2, area: 'Atención' },
-]
 
-const demoSuggestions: Suggestion[] = [
-  { id: 'sg1', day: 'Lunes', time: '08:00 - 12:00', area: 'Cocina', type: 'under', diff: 1, message: 'Falta 1 persona en Cocina turno matutino (Lunes)' },
-  { id: 'sg2', day: 'Lunes', time: '12:00 - 16:00', area: 'Cocina', type: 'over', diff: 1, message: 'Sobra 1 persona en Cocina turno medio (Lunes)' },
-  { id: 'sg3', day: 'Lunes', time: '20:00 - 23:00', area: 'Cocina', type: 'under', diff: 1, message: 'Falta 1 persona en Cocina turno nocturno (Lunes)' },
-  { id: 'sg4', day: 'Lunes', time: '20:00 - 23:00', area: 'Atención', type: 'under', diff: 1, message: 'Falta 1 persona en Atención turno nocturno (Lunes)' },
-  { id: 'sg5', day: 'Viernes', time: '12:00 - 16:00', area: 'Cocina', type: 'over', diff: 1, message: 'Sobra 1 persona en Cocina turno medio (Viernes)' },
-  { id: 'sg6', day: 'Viernes', time: '16:00 - 20:00', area: 'Cocina', type: 'over', diff: 2, message: 'Sobran 2 personas en Cocina turno vespertino (Viernes)' },
-  { id: 'sg7', day: 'Sábado', time: '08:00 - 12:00', area: 'Cocina', type: 'under', diff: 1, message: 'Falta 1 persona en Cocina turno matutino (Sábado)' },
-  { id: 'sg8', day: 'Domingo', time: '08:00 - 12:00', area: 'Cocina', type: 'under', diff: 1, message: 'Falta 1 persona en Cocina turno matutino (Domingo)' },
-  { id: 'sg9', day: 'Domingo', time: '12:00 - 16:00', area: 'Cocina', type: 'under', diff: 1, message: 'Falta 1 persona en Cocina turno medio (Domingo)' },
-  { id: 'sg10', day: 'Sábado', time: '08:00 - 12:00', area: 'Atención', type: 'under', diff: 1, message: 'Falta 1 persona en Atención turno matutino (Sábado)' },
-  { id: 'sg11', day: 'Domingo', time: '08:00 - 12:00', area: 'Atención', type: 'under', diff: 1, message: 'Falta 1 persona en Atención turno matutino (Domingo)' },
-  { id: 'sg12', day: 'Domingo', time: '12:00 - 16:00', area: 'Atención', type: 'under', diff: 1, message: 'Falta 1 persona en Atención turno medio (Domingo)' },
-  { id: 'sg13', day: 'Domingo', time: '20:00 - 23:00', area: 'Atención', type: 'under', diff: 1, message: 'Falta 1 persona en Atención turno nocturno (Domingo)' },
-]
 
 const filterType = ref<'all' | 'over' | 'under'>('all')
 const filteredSuggestions = computed(() => {
@@ -133,9 +61,17 @@ const filteredSuggestions = computed(() => {
   return suggestions.value.filter((s) => s.type === filterType.value)
 })
 
-onMounted(() => {
-  shifts.value = demosShifts
-  suggestions.value = demoSuggestions
+onMounted(async () => {
+  try {
+    const [shiftsRes, suggestionsRes] = await Promise.all([
+      staffService.listShifts(),
+      staffService.getOptimization(),
+    ])
+    shifts.value = shiftsRes.data as unknown as ShiftSlot[]
+    suggestions.value = suggestionsRes.data as unknown as Suggestion[]
+  } catch {
+    // API unavailable — keep empty arrays, template handles empty states
+  }
 })
 </script>
 

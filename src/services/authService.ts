@@ -1,12 +1,23 @@
 import APIBase from './httpBase'
 
 interface RegisterPayload {
-  name: string
+  firstName: string
+  lastName: string
   email: string
   password: string
 }
 
-interface AuthResponse {
+interface RegisterResponse {
+  message: string
+  email: string
+}
+
+interface VerifyPayload {
+  email: string
+  code: string
+}
+
+interface VerifyResponse {
   message: string
   token: string
   user: {
@@ -14,6 +25,21 @@ interface AuthResponse {
     name: string
     email: string
     workspaceIds: string[]
+    role?: string
+  }
+  hasWorkspace?: boolean
+  workspaceCount?: number
+}
+
+interface LoginResponse {
+  message: string
+  token: string
+  user: {
+    id: string
+    name: string
+    email: string
+    workspaceIds: string[]
+    role?: string
   }
   hasWorkspace?: boolean
   workspaceCount?: number
@@ -21,11 +47,19 @@ interface AuthResponse {
 
 class AuthService extends APIBase {
   async register(payload: RegisterPayload) {
-    return this.post<AuthResponse>('auth/register', payload)
+    return this.post<RegisterResponse>('auth/register', payload)
+  }
+
+  async verifyEmail(payload: VerifyPayload) {
+    return this.post<VerifyResponse>('auth/verify', payload)
+  }
+
+  async resendCode(email: string) {
+    return this.post<{ message: string }>('auth/resend-code', { email })
   }
 
   async login(email: string, password: string) {
-    return this.post<AuthResponse>('auth/login', { email, password })
+    return this.post<LoginResponse>('auth/login', { email, password })
   }
 }
 

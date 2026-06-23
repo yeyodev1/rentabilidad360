@@ -106,13 +106,6 @@ async function handleDownload(id: string) {
   }
 }
 
-const demoInstances: ChecklistInstance[] = [
-  { _id: 'demo_i1', templateName: 'Limpieza de Cocina', operatorName: 'Carlos Mendoza', branchName: 'Centro', status: 'pending', responses: { Mesones_desinfectados: true, Temperatura_cámara: 4 }, createdAt: '2026-05-25T09:30:00' },
-  { _id: 'demo_i2', templateName: 'Apertura de Sala', operatorName: 'María López', branchName: 'Norte', status: 'pending', responses: { Mesas_limpias: true }, createdAt: '2026-05-25T08:15:00' },
-  { _id: 'demo_i3', templateName: 'Arqueo de Caja', operatorName: 'Pedro Ramírez', branchName: 'Centro', status: 'reviewed', responses: { Efectivo: 1240.50 }, comments: 'Revisar diferencia de $2.50', createdAt: '2026-05-24T18:00:00', reviewedAt: '2026-05-24T19:30:00' },
-  { _id: 'demo_i4', templateName: 'Revisión de Insumos', operatorName: 'Lucía Fernández', branchName: 'Centro', status: 'approved', responses: { Aceite_filtrado: true, Cantidad_pollo: 45 }, comments: 'Ok, todo en orden', createdAt: '2026-05-24T07:00:00', reviewedAt: '2026-05-24T08:00:00' },
-]
-
 onMounted(async () => {
   userStore.hydrate()
   try {
@@ -123,7 +116,7 @@ onMounted(async () => {
       const res = await checklistService.getPendingReviews()
       instances.value = res.data as unknown as ChecklistInstance[]
     } catch {
-      instances.value = demoInstances
+      // API unavailable — keep empty array, template handles empty states
     }
   } finally {
     loading.value = false
@@ -282,7 +275,7 @@ onMounted(async () => {
   &:active:not(:disabled) { transform: scale(0.97); }
   &.xs { padding: 8px 12px; font-size: 0.78rem; }
 }
-.btn.primary { background: linear-gradient(135deg, $primary, #1678b0); color: white; box-shadow: 0 8px 20px rgba($primary, 0.28); }
+.btn.primary { background: linear-gradient(135deg, $primary, $secondary); color: white; box-shadow: 0 8px 20px rgba($primary, 0.28); }
 .btn.ghost { background: rgba($primary-dark, 0.06); color: $primary-dark; &:hover { background: rgba($primary-dark, 0.12); } }
 
 .loading-state { display: flex; flex-direction: column; align-items: center; padding: 60px 0; gap: 12px; color: $text-secondary; }

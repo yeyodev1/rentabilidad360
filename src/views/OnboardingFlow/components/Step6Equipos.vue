@@ -27,6 +27,14 @@ function addItem() {
   emit('update:modelValue', updatedValue)
 }
 
+function skipStep() {
+  emit('update:modelValue', { ...props.modelValue, skipped: true })
+}
+
+function undoSkip() {
+  emit('update:modelValue', { ...props.modelValue, skipped: false })
+}
+
 function removeItem(i: string | number) {
   const updatedValue = JSON.parse(JSON.stringify(props.modelValue))
   updatedValue.equipment.splice(Number(i), 1)
@@ -322,6 +330,9 @@ function updateItem(i: string | number, field: string, value: any) {
         <span class="btn-icon"><i class="fa-solid fa-plus" /></span>
         <span>Agregar nuevo equipo / maquinaria</span>
       </button>
+
+      <button v-if="!modelValue.skipped" class="ob-skip-btn" @click="skipStep"><i class="fa-regular fa-circle-xmark" /> No tengo equipos ahora, los agregaré después</button>
+      <div v-else class="ob-skipped-banner"><i class="fa-solid fa-forward-step" /><span>Omitiste los equipos. Puedes agregarlos después desde Mantenimiento → Equipos.</span><button class="ob-undo-btn" @click="undoSkip">Agregar ahora</button></div>
     </div>
   </div>
 </template>
@@ -1041,5 +1052,30 @@ function updateItem(i: string | number, field: string, value: any) {
 .card-fade-leave-to {
   opacity: 0;
   transform: scale(0.95);
+}
+
+.ob-skip-btn {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  width: 100%; padding: 14px; margin-top: 8px;
+  border-radius: 14px; background: transparent;
+  border: 1.5px dashed rgba($primary-dark, 0.15); color: $text-secondary;
+  font-family: inherit; font-weight: 700; font-size: 0.85rem; cursor: pointer;
+  transition: all 0.2s;
+  &:hover { border-color: $primary; color: $primary; background: rgba($primary,0.03); }
+}
+.ob-skipped-banner {
+  display: flex; align-items: center; gap: 12px;
+  padding: 16px 18px; margin-top: 12px;
+  background: rgba($primary,0.04); border: 1.5px solid rgba($primary,0.12);
+  border-radius: 14px; font-size: 0.85rem; color: $primary-dark; font-weight: 600;
+  flex-wrap: wrap;
+  i { font-size: 1.2rem; color: $primary; }
+  .ob-undo-btn {
+    margin-left: auto; padding: 8px 16px; border-radius: 10px;
+    background: white; border: 1.5px solid $primary; color: $primary;
+    font-family: inherit; font-weight: 800; font-size: 0.8rem; cursor: pointer;
+    transition: all 0.2s;
+    &:hover { background: $primary; color: white; }
+  }
 }
 </style>

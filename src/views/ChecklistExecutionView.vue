@@ -99,29 +99,13 @@ async function handleSubmit() {
   }
 }
 
-const demoFields: TemplateDetail = {
-  _id: 'demo_c1',
-  name: 'Limpieza de Cocina',
-  category: 'cocina_insumos',
-  description: 'Checklist diario de limpieza profunda',
-  fields: [
-    { label: 'Mesones desinfectados', type: 'checkbox', required: true, order: 0 },
-    { label: 'Temperatura cámara (°C)', type: 'number', required: true, order: 1 },
-    { label: 'Estado general de cocina (1-10)', type: 'slider', required: true, order: 2 },
-    { label: 'Observaciones', type: 'text', required: false, order: 3 },
-    { label: 'Foto de cocina', type: 'photo', required: false, order: 4 },
-  ],
-  isActive: true,
-}
-
 onMounted(async () => {
   try {
     const res = await checklistService.listTemplates()
     const all = res.data as unknown as TemplateDetail[]
     template.value = all.find((t) => t._id === templateId.value) || null
-    if (!template.value) throw new Error('not found')
   } catch {
-    template.value = demoFields
+    // API unavailable — leave as null, template handles the empty state
   } finally {
     loading.value = false
   }
@@ -332,7 +316,7 @@ onMounted(async () => {
   position: fixed; bottom: 0; left: 0; right: 0;
   display: inline-flex; align-items: center; justify-content: center; gap: 10px;
   padding: 18px; border: none; font-family: $font-principal; font-weight: 800; font-size: 1.05rem;
-  color: white; background: linear-gradient(135deg, $primary, #1678b0);
+  color: white; background: linear-gradient(135deg, $primary, $secondary);
   box-shadow: 0 -4px 20px rgba($primary, 0.3); cursor: pointer; min-height: 64px;
   &.disabled { opacity: 0.5; cursor: not-allowed; }
   &:active:not(.disabled) { transform: scale(0.98); }

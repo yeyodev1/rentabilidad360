@@ -175,7 +175,7 @@ onBeforeUnmount(() => {
 
 .btn.accept {
   color: white;
-  background: linear-gradient(135deg, $primary, #1678b0);
+  background: linear-gradient(135deg, $primary, $secondary);
   box-shadow: 0 10px 24px rgba($primary, 0.32);
   &.danger {
     background: linear-gradient(135deg, $alert-error, #dc2626);

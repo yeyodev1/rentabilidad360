@@ -1,14 +1,12 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { authService } from '@/services/authService'
-import { useUserStore } from '@/stores/user'
 
 const props = defineProps<{ show: boolean }>()
 const emit = defineEmits<{ close: [] }>()
 
-const userStore = useUserStore()
-
-const name = ref('')
+const firstName = ref('')
+const lastName = ref('')
 const email = ref('')
 const password = ref('')
 const loading = ref(false)
@@ -17,7 +15,7 @@ const success = ref(false)
 
 async function handleRegister() {
   error.value = ''
-  if (!name.value.trim() || !email.value.trim() || !password.value) {
+  if (!firstName.value.trim() || !lastName.value.trim() || !email.value.trim() || !password.value) {
     error.value = 'Todos los campos son obligatorios'
     return
   }
@@ -28,13 +26,12 @@ async function handleRegister() {
 
   loading.value = true
   try {
-    const res = await authService.register({
-      name: name.value,
-      email: email.value,
+    await authService.register({
+      firstName: firstName.value.trim(),
+      lastName: lastName.value.trim(),
+      email: email.value.trim(),
       password: password.value,
     })
-    localStorage.setItem('access_token', res.data.token)
-    userStore.setUser(res.data.user)
     success.value = true
   } catch (e: any) {
     error.value = e?.message || 'Error al registrarse. Intenta de nuevo.'
@@ -63,9 +60,15 @@ function handleBackdrop(e: MouseEvent) {
           </div>
 
           <form class="modal-form" @submit.prevent="handleRegister">
-            <div class="form-group">
-              <label class="form-label">Nombre</label>
-              <input v-model="name" type="text" class="form-input" placeholder="Tu nombre" />
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Nombre</label>
+                <input v-model="firstName" type="text" class="form-input" placeholder="Ej. Juan" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Apellido</label>
+                <input v-model="lastName" type="text" class="form-input" placeholder="Ej. Pérez" />
+              </div>
             </div>
             <div class="form-group">
               <label class="form-label">Email</label>
@@ -97,10 +100,10 @@ function handleBackdrop(e: MouseEvent) {
 
         <template v-else>
           <div class="success-content">
-            <div class="success-icon"><i class="fa-solid fa-circle-check" /></div>
-            <h2 class="modal-title">¡Cuenta creada con éxito!</h2>
-            <p class="modal-desc">Ahora puedes acceder a todas las herramientas de análisis avanzado.</p>
-            <button class="btn-submit" @click="emit('close')">Ir al Dashboard</button>
+            <div class="success-icon"><i class="fa-solid fa-envelope-circle-check" /></div>
+            <h2 class="modal-title">¡Revisa tu correo!</h2>
+            <p class="modal-desc">Te enviamos un código de verificación a <strong>{{ email }}</strong>. Ingresa el código para activar tu cuenta.</p>
+            <button class="btn-submit" @click="emit('close')">Entendido</button>
           </div>
         </template>
       </div>
@@ -202,6 +205,12 @@ function handleBackdrop(e: MouseEvent) {
   gap: 16px;
 }
 
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
 .form-group {
   display: flex;
   flex-direction: column;
@@ -245,7 +254,7 @@ function handleBackdrop(e: MouseEvent) {
   padding: 16px;
   border: none;
   border-radius: 12px;
-  background: linear-gradient(135deg, $primary, #1678b0);
+  background: linear-gradient(135deg, $primary, $secondary);
   color: white;
   font-size: 1rem;
   font-weight: 700;

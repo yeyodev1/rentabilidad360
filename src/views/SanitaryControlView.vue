@@ -262,7 +262,7 @@ onMounted(() => {
   align-items: center; justify-content: center; gap: 10px;
   padding: 16px; border: none; border-radius: 16px;
   font-family: $font-principal; font-weight: 800; font-size: 1rem;
-  color: white; background: linear-gradient(135deg, $primary, #1678b0);
+  color: white;   background: linear-gradient(135deg, $primary, $secondary);
   box-shadow: 0 14px 30px rgba($primary, 0.35); cursor: pointer;
 }
 

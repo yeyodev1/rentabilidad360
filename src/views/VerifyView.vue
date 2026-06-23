@@ -1,41 +1,64 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import { useRouter, RouterLink } from 'vue-router'
+import { ref, onMounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { authService } from '@/services/authService'
 import { useUserStore } from '@/stores/user'
 
 const router = useRouter()
+const route = useRoute()
 const userStore = useUserStore()
 
-const email = ref('')
-const password = ref('')
+const email = ref((route.query.email as string) || '')
+const code = ref('')
 const loading = ref(false)
+const resending = ref(false)
 const error = ref('')
-const showPwd = ref(false)
+const success = ref('')
 
-async function handleLogin() {
+onMounted(() => {
+  if (!email.value) {
+    router.replace('/register')
+  }
+})
+
+function onCodeInput(e: Event) {
+  const input = e.target as HTMLInputElement
+  code.value = input.value.replace(/\D/g, '').slice(0, 6)
+}
+
+async function handleVerify() {
   error.value = ''
-  if (!email.value.trim() || !password.value) {
-    error.value = 'Email y contraseña son obligatorios'
+  if (code.value.length !== 6) {
+    error.value = 'Ingresa el código de 6 dígitos'
     return
   }
   loading.value = true
   try {
-    const res = await authService.login(email.value.trim(), password.value)
+    const res = await authService.verifyEmail({ email: email.value, code: code.value })
     localStorage.setItem('access_token', res.data.token)
     if (res.data.user.role) {
       localStorage.setItem('user_role', res.data.user.role)
     }
     userStore.setUser(res.data.user)
-    router.replace(res.data.hasWorkspace ? '/modulos' : '/onboarding')
+    router.replace('/onboarding')
   } catch (e: any) {
-    if (e?.response?.data?.needsVerification) {
-      router.replace(`/verify?email=${encodeURIComponent(e.response.data.email)}`)
-      return
-    }
-    error.value = e?.response?.data?.message || e?.message || 'Credenciales inválidas. Intenta de nuevo.'
+    error.value = e?.response?.data?.message || e?.message || 'Código inválido o expirado.'
   } finally {
     loading.value = false
+  }
+}
+
+async function handleResend() {
+  resending.value = true
+  error.value = ''
+  success.value = ''
+  try {
+    await authService.resendCode(email.value)
+    success.value = 'Código reenviado. Revisa tu bandeja de entrada.'
+  } catch (e: any) {
+    error.value = e?.response?.data?.message || e?.message || 'No pudimos reenviar el código.'
+  } finally {
+    resending.value = false
   }
 }
 </script>
@@ -48,66 +71,57 @@ async function handleLogin() {
     </div>
 
     <div class="auth-card">
-      <RouterLink to="/" class="auth-back">
+      <button class="auth-back" @click="router.push('/register')">
         <i class="fa-solid fa-arrow-left" /> Volver
-      </RouterLink>
+      </button>
 
       <div class="brand-badge">
-        <i class="fa-solid fa-chart-pie" /> Rentabilidad360
+        <i class="fa-solid fa-envelope-circle-check" /> Verificar
       </div>
 
-      <h1 class="auth-title">Bienvenido de vuelta</h1>
-      <p class="auth-sub">Inicia sesión para ver tus diagnósticos y módulos operativos.</p>
+      <h1 class="auth-title">Revisa tu correo</h1>
+      <p class="auth-sub">
+        Te enviamos un código de 6 dígitos a <strong>{{ email }}</strong>. Si no lo encuentras, revisa tu carpeta de spam.
+      </p>
 
-      <form class="auth-form" @submit.prevent="handleLogin">
+      <form class="auth-form" @submit.prevent="handleVerify">
         <label class="field">
-          <span class="field-label"><i class="fa-solid fa-envelope" /> Email</span>
+          <span class="field-label"><i class="fa-solid fa-key" /> Código de verificación</span>
           <input
-            v-model="email"
-            type="email"
-            class="field-input"
-            placeholder="correo@ejemplo.com"
-            inputmode="email"
-            autocomplete="email"
+            :value="code"
+            @input="onCodeInput"
+            type="text"
+            class="field-input code-input"
+            placeholder="0 0 0 0 0 0"
+            inputmode="numeric"
+            autocomplete="one-time-code"
+            maxlength="6"
           />
-        </label>
-
-        <label class="field">
-          <span class="field-label"><i class="fa-solid fa-lock" /> Contraseña</span>
-          <div class="field-input-wrap">
-            <input
-              v-model="password"
-              :type="showPwd ? 'text' : 'password'"
-              class="field-input"
-              placeholder="Mínimo 6 caracteres"
-              autocomplete="current-password"
-            />
-            <button
-              type="button"
-              class="field-toggle"
-              @click="showPwd = !showPwd"
-              :aria-label="showPwd ? 'Ocultar contraseña' : 'Mostrar contraseña'"
-            >
-              <i :class="showPwd ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye'" />
-            </button>
-          </div>
         </label>
 
         <p v-if="error" class="form-error">
           <i class="fa-solid fa-circle-exclamation" /> {{ error }}
         </p>
+        <p v-if="success" class="form-success">
+          <i class="fa-solid fa-circle-check" /> {{ success }}
+        </p>
 
-        <button type="submit" :class="['btn-submit', { loading }]" :disabled="loading">
+        <button type="submit" :class="['btn-submit', { loading }]" :disabled="loading || code.length !== 6">
           <i v-if="loading" class="fa-solid fa-spinner fa-spin" />
-          <i v-else class="fa-solid fa-right-to-bracket" />
-          <span>{{ loading ? 'Ingresando...' : 'Iniciar sesión' }}</span>
+          <i v-else class="fa-solid fa-check-circle" />
+          <span>{{ loading ? 'Verificando...' : 'Verificar cuenta' }}</span>
         </button>
       </form>
 
-      <p class="auth-footer">
-        ¿No tienes cuenta?
-        <RouterLink to="/register" class="auth-link">Crea una gratis <i class="fa-solid fa-arrow-right" /></RouterLink>
-      </p>
+      <div class="auth-divider">
+        <span>¿No recibiste el código?</span>
+      </div>
+
+      <button type="button" class="btn-outline" :disabled="resending" @click="handleResend">
+        <i v-if="resending" class="fa-solid fa-spinner fa-spin" />
+        <i v-else class="fa-solid fa-rotate" />
+        <span>{{ resending ? 'Reenviando...' : 'Reenviar código' }}</span>
+      </button>
     </div>
   </div>
 </template>
@@ -177,6 +191,10 @@ async function handleLogin() {
   color: $primary;
   align-self: flex-start;
   padding: 4px 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-family: $font-principal;
 }
 
 .brand-badge {
@@ -207,6 +225,8 @@ async function handleLogin() {
   color: $text-secondary;
   margin: 0 0 6px;
   line-height: 1.5;
+
+  strong { color: $text; }
 }
 
 .auth-form {
@@ -232,8 +252,6 @@ async function handleLogin() {
   i { color: $primary; }
 }
 
-.field-input-wrap { position: relative; }
-
 .field-input {
   width: 100%;
   padding: 13px 14px;
@@ -254,17 +272,13 @@ async function handleLogin() {
   &::placeholder { color: $text-secondary; opacity: 0.5; }
 }
 
-.field-toggle {
-  position: absolute;
-  right: 8px;
-  top: 50%;
-  transform: translateY(-50%);
-  border: none;
-  background: transparent;
-  color: $text-secondary;
-  cursor: pointer;
-  padding: 6px 8px;
-  font-size: 0.9rem;
+.code-input {
+  font-size: 1.8rem;
+  font-weight: 800;
+  letter-spacing: 12px;
+  text-align: center;
+  font-family: $font-secondary;
+  padding: 16px 14px;
 }
 
 .form-error {
@@ -274,6 +288,18 @@ async function handleLogin() {
   font-size: 0.8rem;
   color: $alert-error;
   background: $alert-error-bg;
+  border-radius: $radius-sm;
+  padding: 10px 12px;
+  margin: 0;
+}
+
+.form-success {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  color: $alert-success;
+  background: $alert-success-bg;
   border-radius: $radius-sm;
   padding: 10px 12px;
   margin: 0;
@@ -302,18 +328,50 @@ async function handleLogin() {
   &:hover:not(:disabled) { box-shadow: 0 8px 24px rgba($primary, 0.4); }
 }
 
-.auth-footer {
-  text-align: center;
-  font-size: 0.82rem;
-  color: $text-secondary;
-  margin: 4px 0 0;
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 2px 0;
+
+  &::before,
+  &::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: $border;
+  }
+
+  span {
+    font-size: 0.75rem;
+    color: $text-secondary;
+    white-space: nowrap;
+  }
 }
 
-.auth-link {
-  color: $primary;
-  font-weight: 700;
+.btn-outline {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 12px;
+  border: 1.5px solid $border;
+  border-radius: $radius-md;
+  font-family: $font-principal;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: $text;
+  background: transparent;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+
+  &:disabled { opacity: 0.6; cursor: progress; }
+  &:hover:not(:disabled) {
+    border-color: $primary;
+    background: $primary-bg;
+  }
+
+  i { color: $primary; }
 }
 </style>

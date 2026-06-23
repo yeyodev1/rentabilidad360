@@ -214,7 +214,7 @@ function close() {
 }
 .btn.ghost { background: rgba($primary-dark, 0.06); color: $primary-dark; &:hover { background: rgba($primary-dark, 0.12); } }
 .btn.primary {
-  background: linear-gradient(135deg, $primary, #1678b0); color: white;
+  background: linear-gradient(135deg, $primary, $secondary); color: white;
   box-shadow: 0 10px 24px rgba($primary, 0.3);
 }
 

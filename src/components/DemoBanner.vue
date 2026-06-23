@@ -145,7 +145,7 @@ function dismiss() {
   font-weight: 800;
   font-size: 0.78rem;
   color: white;
-  background: linear-gradient(135deg, $primary, #1678b0);
+  background: linear-gradient(135deg, $primary, $secondary);
   border: none;
   cursor: pointer;
   text-decoration: none;

@@ -92,52 +92,18 @@ async function handleCreate() {
     templates.value.push(res.data as unknown as ChecklistTemplate)
     ui.showToast({ title: 'Plantilla creada', tone: 'success' })
   } catch {
-    const demoId = `demo_${Date.now()}`
-    templates.value.push({ _id: demoId, ...payload, fields: [], isActive: true })
-    ui.showToast({ title: 'Plantilla creada (offline)', tone: 'info' })
+    ui.showToast({ title: 'Error al crear plantilla', tone: 'error' })
   }
   showCreateForm.value = false
   newTemplate.value = { name: '', category: 'cocina_insumos', description: '' }
 }
-
-const demoTemplates: ChecklistTemplate[] = [
-  { _id: 'demo_c1', name: 'Limpieza de Cocina', category: 'cocina_insumos', description: 'Checklist diario de limpieza profunda', fields: [
-    { label: 'Mesones desinfectados', type: 'checkbox', required: true, order: 0 },
-    { label: 'Temperatura cámara', type: 'number', required: true, order: 1 },
-    { label: 'Estado de freidoras', type: 'slider', required: true, order: 2 },
-  ], isActive: true },
-  { _id: 'demo_c2', name: 'Revisión de Insumos', category: 'cocina_insumos', description: 'Control de inventario de insumos diarios', fields: [
-    { label: 'Aceite filtrado', type: 'checkbox', required: true, order: 0 },
-    { label: 'Cantidad de pollo (kg)', type: 'number', required: true, order: 1 },
-    { label: 'Foto de almacén', type: 'photo', required: false, order: 2 },
-  ], isActive: true },
-  { _id: 'demo_a1', name: 'Apertura de Sala', category: 'atencion_planta', description: 'Verificaciones antes de abrir', fields: [
-    { label: 'Mesas limpias y puestas', type: 'checkbox', required: true, order: 0 },
-    { label: 'Baños abastecidos', type: 'checkbox', required: true, order: 1 },
-    { label: 'Estado general del salón', type: 'slider', required: true, order: 2 },
-  ], isActive: true },
-  { _id: 'demo_a2', name: 'Cierre de Atención', category: 'atencion_planta', description: 'Checklist de cierre de turno atención', fields: [
-    { label: 'Sillas apiladas', type: 'checkbox', required: true, order: 0 },
-    { label: 'Basura retirada', type: 'checkbox', required: true, order: 1 },
-    { label: 'Observaciones', type: 'text', required: false, order: 2 },
-  ], isActive: true },
-  { _id: 'demo_f1', name: 'Arqueo de Caja', category: 'caja_finanzas', description: 'Cierre de caja diario', fields: [
-    { label: 'Efectivo en caja ($)', type: 'number', required: true, order: 0 },
-    { label: 'Tarjetas procesadas', type: 'number', required: true, order: 1 },
-    { label: 'Diferencias detectadas', type: 'text', required: false, order: 2 },
-  ], isActive: true },
-  { _id: 'demo_f2', name: 'Depósito Bancario', category: 'caja_finanzas', description: 'Registro de depósito del día', fields: [
-    { label: 'Monto depositado', type: 'number', required: true, order: 0 },
-    { label: 'Foto del comprobante', type: 'photo', required: true, order: 1 },
-  ], isActive: true },
-]
 
 onMounted(async () => {
   try {
     const res = await checklistService.listTemplates()
     templates.value = res.data as unknown as ChecklistTemplate[]
   } catch {
-    templates.value = demoTemplates
+    // API unavailable — keep empty array, template handles empty states
   } finally {
     loading.value = false
   }
@@ -258,7 +224,7 @@ onMounted(async () => {
   &.sm { padding: 8px 12px; font-size: 0.8rem; }
 }
 .btn.primary {
-  background: linear-gradient(135deg, $primary, #1678b0); color: white;
+  background: linear-gradient(135deg, $primary, $secondary); color: white;
   box-shadow: 0 8px 20px rgba($primary, 0.28);
 }
 .btn.ghost {

@@ -48,6 +48,14 @@ function copyToAllDays(area: 'cocina' | 'atencion', dayIndex: number) {
   emit('update:modelValue', updatedValue)
 }
 
+function skipStep() {
+  emit('update:modelValue', { ...props.modelValue, skipped: true })
+}
+
+function undoSkip() {
+  emit('update:modelValue', { ...props.modelValue, skipped: false })
+}
+
 function getTimelineStyle(open: string, close: string) {
   if (!open || !close) return { width: '0%', left: '0%', display: 'none' }
   const [h1, m1] = open.split(':').map(Number)
@@ -164,6 +172,8 @@ function getTimelineStyle(open: string, close: string) {
       Activa los días de operación y ajusta sus horas. Puedes copiar las horas de un día al resto
       rápidamente.
     </p>
+    <button v-if="!modelValue.skipped" class="ob-skip-btn" @click="skipStep"><i class="fa-regular fa-circle-xmark" /> No tengo horarios ahora, lo configuraré después</button>
+    <div v-else class="ob-skipped-banner"><i class="fa-solid fa-forward-step" /><span>Omitiste los horarios. Puedes configurarlos después desde el panel de tu sucursal.</span><button class="ob-undo-btn" @click="undoSkip">Configurar ahora</button></div>
   </div>
 </template>
 
@@ -415,5 +425,29 @@ function getTimelineStyle(open: string, close: string) {
   letter-spacing: 0.2px;
   pointer-events: none;
   white-space: nowrap;
+}
+.ob-skip-btn {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  width: 100%; padding: 14px; margin-top: 8px;
+  border-radius: 14px; background: transparent;
+  border: 1.5px dashed rgba($primary-dark, 0.15); color: $text-secondary;
+  font-family: inherit; font-weight: 700; font-size: 0.85rem; cursor: pointer;
+  transition: all 0.2s;
+  &:hover { border-color: $primary; color: $primary; background: rgba($primary,0.03); }
+}
+.ob-skipped-banner {
+  display: flex; align-items: center; gap: 12px;
+  padding: 16px 18px; margin-top: 12px;
+  background: rgba($primary,0.04); border: 1.5px solid rgba($primary,0.12);
+  border-radius: 14px; font-size: 0.85rem; color: $primary-dark; font-weight: 600;
+  flex-wrap: wrap;
+  i { font-size: 1.2rem; color: $primary; }
+  .ob-undo-btn {
+    margin-left: auto; padding: 8px 16px; border-radius: 10px;
+    background: white; border: 1.5px solid $primary; color: $primary;
+    font-family: inherit; font-weight: 800; font-size: 0.8rem; cursor: pointer;
+    transition: all 0.2s;
+    &:hover { background: $primary; color: white; }
+  }
 }
 </style>

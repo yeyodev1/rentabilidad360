@@ -5,7 +5,6 @@ import { useUIStore } from '@/stores/ui'
 import { useUserStore } from '@/stores/user'
 import { onboardingService } from '@/services/onboardingService'
 
-// Import Step Subcomponents
 import Step1Empresa from './components/Step1Empresa.vue'
 import Step2Sucursal from './components/Step2Sucursal.vue'
 import Step3Horarios from './components/Step3Horarios.vue'
@@ -26,24 +25,39 @@ const currentStep = ref(1)
 const completedSteps = ref<number[]>([])
 const isSubmitting = ref(false)
 const direction = ref<'next' | 'prev'>('next')
+const onboardingType = ref<'project' | 'existing' | null>(null)
 
 const steps = [
-  { n: 1, label: 'Empresa', icon: 'fa-building', desc: 'Datos legales del negocio', tag: 'Paso 1' },
-  { n: 2, label: 'Sucursal', icon: 'fa-store', desc: 'Ubicación y contacto', tag: 'Paso 2' },
-  { n: 3, label: 'Horarios', icon: 'fa-clock', desc: 'Cocina y atención al cliente', tag: 'Paso 3' },
-  { n: 4, label: 'Recetas', icon: 'fa-utensils', desc: 'Platos e ingredientes', tag: 'Paso 4' },
-  { n: 5, label: 'Ingredientes', icon: 'fa-basket-shopping', desc: 'Insumos y costos', tag: 'Paso 5' },
-  { n: 6, label: 'Equipos', icon: 'fa-screwdriver-wrench', desc: 'Maquinaria y depreciación', tag: 'Paso 6' },
-  { n: 7, label: 'Costos Fijos', icon: 'fa-file-invoice-dollar', desc: 'Gastos mensuales', tag: 'Paso 7' },
-  { n: 8, label: 'POS', icon: 'fa-plug', desc: 'Integración opcional', tag: 'Paso 8' },
-  { n: 9, label: 'Alertas', icon: 'fa-bell', desc: 'Notificaciones automáticas', tag: 'Paso 9' },
-  { n: 10, label: 'Finalizar', icon: 'fa-flag-checkered', desc: 'Todo listo', tag: 'Paso 10' },
+  { n: 1, label: 'Empresa', icon: 'fa-building', desc: 'Datos legales del negocio', tag: 'NIVEL 1' },
+  { n: 2, label: 'Sucursal', icon: 'fa-store', desc: 'Ubicación y contacto', tag: 'NIVEL 2' },
+  { n: 3, label: 'Horarios', icon: 'fa-clock', desc: 'Cocina y atención al cliente', tag: 'NIVEL 3' },
+  { n: 4, label: 'Platos', icon: 'fa-utensils', desc: 'Menú y precios de venta', tag: 'NIVEL 4' },
+  { n: 5, label: 'Ingredientes', icon: 'fa-basket-shopping', desc: 'Insumos y costos', tag: 'NIVEL 5' },
+  { n: 6, label: 'Equipos', icon: 'fa-screwdriver-wrench', desc: 'Maquinaria y depreciación', tag: 'NIVEL 6' },
+  { n: 7, label: 'Costos Fijos', icon: 'fa-receipt', desc: 'Gastos operativos mensuales', tag: 'NIVEL 7' },
+  { n: 8, label: 'POS', icon: 'fa-plug-circle-bolt', desc: 'Conexión de ventas', tag: 'NIVEL 8' },
+  { n: 9, label: 'Alertas', icon: 'fa-bell', desc: 'Notificaciones y canales', tag: 'NIVEL 9' },
+  { n: 10, label: 'Finalizar', icon: 'fa-flag-checkered', desc: 'Todo listo', tag: 'NIVEL 10' },
 ]
+
+const activeSteps = computed(() => {
+  if (onboardingType.value === 'existing') {
+    const existingNs = [2, 3, 7, 9, 10]
+    return existingNs.map((n, i) => {
+      const s = steps.find(st => st.n === n)!
+      return { ...s, tag: `Paso ${i + 1}` }
+    })
+  }
+  return steps
+})
+
+const country = computed(() => stepData.value[1]?.country || '')
 
 const stepData = ref<Record<number, any>>({
   1: { legalName: '', commercialName: '', ruc: '', country: '', city: '' },
-  2: { name: '', address: '', phone: '' },
+  2: { name: '', address: '', phone: '', hasPhysicalStore: true },
   3: {
+    skipped: false,
     cocina: [
       { open: '08:00', close: '22:00' },
       { open: '08:00', close: '22:00' },
@@ -63,17 +77,19 @@ const stepData = ref<Record<number, any>>({
       { open: '', close: '' }
     ]
   },
-  4: { recipes: [{ name: '', sellingPrice: null }] },
-  5: { ingredients: [{ name: '', unitOfMeasure: 'unidad', costPrice: null, wastePercentage: null }] },
-  6: { equipment: [] },
-  7: { rent: null, payroll: null, utilities: null, insurance: null, marketing: null },
-  8: { provider: '', apiKey: '', webhookUrl: '' },
-  9: { whatsappEnabled: false, emailEnabled: false, pushEnabled: false, checklistAlerts: false, marginAlerts: false, maintenanceAlerts: false, whatsappNumber: '', emailAddress: '' },
+  4: { skipped: false },
+  5: { skipped: false },
+  6: { skipped: false },
+  7: { skipped: false, rent: null, payroll: null, utilities: null, insurance: null, marketing: null },
+  8: { skipped: false },
+  9: { skipped: false, whatsappEnabled: false, emailEnabled: false, checklistAlerts: true, marginAlerts: true, maintenanceAlerts: true },
   10: {},
 })
 
-const currentStepMeta = computed(() => steps.find(s => s.n === currentStep.value)!)
-const progress = computed(() => ((currentStep.value - 1) / 9) * 100)
+const currentStepMeta = computed(() => activeSteps.value.find(s => s.n === currentStep.value) || steps.find(s => s.n === currentStep.value) || steps[0]!)
+const totalSteps = computed(() => activeSteps.value.length)
+const currentStepIndex = computed(() => activeSteps.value.findIndex(s => s.n === currentStep.value))
+const progress = computed(() => (Math.max(0, currentStepIndex.value) / Math.max(1, totalSteps.value - 1)) * 100)
 
 const canGoNext = computed(() => {
   const d = stepData.value[currentStep.value]
@@ -81,14 +97,13 @@ const canGoNext = computed(() => {
   switch (currentStep.value) {
     case 1: return !!(d.legalName && d.ruc)
     case 2: return !!d.name
-    case 3:
-      const hasCocina = d.cocina?.some((h: any) => h.open && h.close)
-      const hasAtencion = d.atencion?.some((h: any) => h.open && h.close)
-      return hasCocina && hasAtencion
-    case 4: return d.recipes?.length > 0
-    case 5: return d.ingredients?.length > 0
-    case 6: return d.equipment?.length > 0
-    case 7: return d.rent != null
+    case 3: return d.skipped || (d.cocina?.some((h: any) => h.open && h.close) && d.atencion?.some((h: any) => h.open && h.close))
+    case 4: return d.skipped || !d.recipes || d.recipes.length === 0 || d.recipes.some((r: any) => r.name && r.sellingPrice)
+    case 5: return d.skipped || !d.ingredients || d.ingredients.length === 0 || d.ingredients.some((i: any) => i.name)
+    case 6: return d.skipped || !d.equipment || d.equipment.length === 0 || d.equipment.some((e: any) => e.name)
+    case 7: return d.skipped || true
+    case 8: return d.skipped || true
+    case 9: return d.skipped || true
     default: return true
   }
 })
@@ -112,7 +127,15 @@ async function checkExisting() {
       return
     }
     if (d) {
-      currentStep.value = d.currentStep || 1
+      if (d.completedSteps && d.completedSteps.length > 0) {
+        onboardingType.value = (d.onboardingType === 'existing' ? 'existing' : 'project')
+        let savedStep = d.currentStep || (onboardingType.value === 'existing' ? 2 : 1)
+        if (savedStep > 10) savedStep = 10
+        currentStep.value = savedStep
+      } else {
+        onboardingType.value = null
+        currentStep.value = 1
+      }
       completedSteps.value = d.completedSteps || []
       if (d.data) {
         for (const key of Object.keys(d.data)) {
@@ -128,22 +151,36 @@ async function checkExisting() {
 }
 
 async function saveCurrentStep() {
-  try { await onboardingService.saveStep(currentStep.value, stepData.value[currentStep.value] || {}) } catch { /* noop */ }
+  try {
+    await onboardingService.saveStep(currentStep.value, {
+      ...(stepData.value[currentStep.value] || {}),
+      onboardingType: onboardingType.value,
+    })
+  } catch { /* noop */ }
 }
 
 async function nextStep() {
   if (isSubmitting.value || !canGoNext.value) return
   isSubmitting.value = true; direction.value = 'next'
   try {
-    await saveCurrentStep()
-    if (!completedSteps.value.includes(currentStep.value)) completedSteps.value.push(currentStep.value)
-    currentStep.value < 10 ? currentStep.value++ : await finishOnboarding()
+    if (currentStep.value < 10) {
+      await saveCurrentStep()
+      if (!completedSteps.value.includes(currentStep.value)) completedSteps.value.push(currentStep.value)
+    }
+    
+    const nextIdx = currentStepIndex.value + 1
+    if (nextIdx < activeSteps.value.length) {
+      currentStep.value = activeSteps.value[nextIdx]?.n || 1
+    } else {
+      await finishOnboarding()
+    }
   } finally { isSubmitting.value = false }
 }
 
 function prevStep() {
-  if (currentStep.value <= 1) return
-  direction.value = 'prev'; currentStep.value--
+  if (currentStepIndex.value <= 0) return
+  direction.value = 'prev'
+  currentStep.value = activeSteps.value[currentStepIndex.value - 1]?.n || 1
 }
 
 async function finishOnboarding() {
@@ -160,6 +197,11 @@ function jumpToStep(n: number) {
     currentStep.value = n
   }
 }
+function selectType(type: 'project' | 'existing') {
+  onboardingType.value = type
+  currentStep.value = type === 'existing' ? 2 : 1
+}
+
 onMounted(checkExisting)
 </script>
 
@@ -167,6 +209,40 @@ onMounted(checkExisting)
   <div v-if="checking" class="check-screen">
     <div class="cs-spinner" /><p class="cs-text">Preparando tu configuración…</p>
   </div>
+  
+  <div v-else-if="!onboardingType" class="type-selector-screen">
+    <div class="float-particle" />
+    <div class="float-particle" />
+    <div class="float-particle" />
+    <div class="float-particle" />
+    <div class="float-particle" />
+    <div class="ts-card">
+      <div class="ts-header">
+        <div class="ts-emoji"><i class="fa-solid fa-wand-magic-sparkles" /></div>
+        <h1>¿Qué vas a crear hoy?</h1>
+        <p>Elige el tipo de configuración para tu negocio</p>
+      </div>
+      <div class="ts-options">
+        <button class="ts-option" @click="selectType('project')">
+          <div class="ts-icon"><i class="fa-solid fa-rocket" /></div>
+          <div class="ts-info">
+            <strong>Nuevo proyecto</strong>
+            <span>Registra un negocio desde cero: empresa, sucursal, menú, equipos y costos</span>
+          </div>
+          <i class="fa-solid fa-chevron-right ts-arrow" />
+        </button>
+        <button class="ts-option" @click="selectType('existing')">
+          <div class="ts-icon"><i class="fa-solid fa-building" /></div>
+          <div class="ts-info">
+            <strong>Empresa que ya opera</strong>
+            <span>Configura un negocio existente: sucursal, horarios, costos fijos y alertas</span>
+          </div>
+          <i class="fa-solid fa-chevron-right ts-arrow" />
+        </button>
+      </div>
+    </div>
+  </div>
+
   <div v-else class="ob-root">
     <!-- ─── LEFT SIDEBAR ─── -->
     <aside class="ob-sidebar">
@@ -179,12 +255,15 @@ onMounted(checkExisting)
         <div class="ob-side-progress">
           <div class="ob-side-progress-track">
             <div class="ob-side-progress-fill" :style="{ width: progress + '%' }" />
+            <div v-for="s in activeSteps" :key="s.n" class="ob-milestone" :style="{ left: ((activeSteps.findIndex(x=>x.n===s.n))/Math.max(1,activeSteps.length-1))*100 + '%' }" :class="{ reached: completedSteps.includes(s.n) || s.n === currentStep }">
+              <i class="fa-solid fa-star" />
+            </div>
           </div>
-          <span class="ob-side-progress-label">{{ Math.round(progress) }}% completado</span>
+          <span class="ob-side-progress-label"><i class="fa-solid fa-bolt" /> {{ Math.round(progress) }}% · Nivel {{ currentStepIndex + 1 }}</span>
         </div>
 
         <nav class="ob-side-nav">
-          <button v-for="s in steps" :key="s.n" type="button"
+          <button v-for="s in activeSteps" :key="s.n" type="button"
             :class="['ob-side-item', sidebarStep(s)]"
             :disabled="s.n > currentStep"
             @click="jumpToStep(s.n)">
@@ -213,14 +292,14 @@ onMounted(checkExisting)
     <main class="ob-main">
       <header class="ob-main-head">
         <div class="ob-main-head-left">
-          <span class="ob-main-eyebrow">{{ currentStepMeta.tag }}</span>
+          <span class="ob-main-eyebrow"><i class="fa-solid fa-gamepad" /> {{ currentStepMeta.tag }}</span>
           <h1 class="ob-main-title">
             <i :class="'fa-solid ' + currentStepMeta.icon" />
             {{ currentStepMeta.label }}
           </h1>
           <p class="ob-main-desc">{{ currentStepMeta.desc }}</p>
         </div>
-        <span class="ob-main-badge">{{ currentStep }}/10</span>
+        <span class="ob-main-badge">{{ currentStepIndex + 1 }}/{{ totalSteps }}</span>
       </header>
 
       <div class="ob-main-body">
@@ -234,7 +313,7 @@ onMounted(checkExisting)
             <Step6Equipos v-else-if="currentStep === 6" v-model="stepData[6]" />
             <Step7CostosFijos v-else-if="currentStep === 7" v-model="stepData[7]" />
             <Step8POS v-else-if="currentStep === 8" v-model="stepData[8]" />
-            <Step9Alertas v-else-if="currentStep === 9" v-model="stepData[9]" :country="stepData[1]?.country || ''" />
+            <Step9Alertas v-else-if="currentStep === 9" v-model="stepData[9]" :country="country" />
             <Step10Finalizar v-else-if="currentStep === 10" />
           </div>
         </Transition>
@@ -242,13 +321,13 @@ onMounted(checkExisting)
 
       <footer class="ob-main-foot">
         <div class="ob-main-foot-left">
-          <button v-if="currentStep > 1" class="ob-btn ob-btn-ghost" @click="prevStep">
+          <button v-if="currentStepIndex > 0" class="ob-btn ob-btn-ghost" @click="prevStep">
             <i class="fa-solid fa-arrow-left" /> Anterior
           </button>
         </div>
         <button class="ob-btn ob-btn-primary" :disabled="!canGoNext || isSubmitting" @click="nextStep">
           <template v-if="isSubmitting">Guardando…</template>
-          <template v-else-if="currentStep === 10">Ir al Dashboard <i class="fa-solid fa-rocket" /></template>
+          <template v-else-if="currentStep === 10"><i class="fa-solid fa-rocket" /> Ir al Dashboard</template>
           <template v-else>Siguiente <i class="fa-solid fa-arrow-right" /></template>
         </button>
       </footer>
@@ -266,6 +345,98 @@ onMounted(checkExisting)
 .cs-spinner { width: 40px; height: 40px; border: 3px solid rgba($primary, 0.15); border-top-color: $primary; border-radius: 50%; animation: cs-spin 0.7s linear infinite; }
 @keyframes cs-spin { to { transform: rotate(360deg); } }
 .cs-text { font-size: 0.95rem; color: $text-secondary; font-weight: 600; }
+
+/* ── Type Selector Screen ── */
+.type-selector-screen {
+  min-height: 100dvh; display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(160deg, #0f172a 0%, #1a2e35 30%, #0f766e 70%, #0d9488 100%);
+  padding: 24px; position: relative; overflow: hidden;
+}
+.type-selector-screen::before {
+  content: ''; position: absolute; inset: 0;
+  background: radial-gradient(circle at 20% 50%, rgba(15,118,110,0.15) 0%, transparent 50%),
+              radial-gradient(circle at 80% 20%, rgba(245,158,11,0.1) 0%, transparent 50%),
+              radial-gradient(circle at 50% 80%, rgba(13,148,136,0.1) 0%, transparent 50%);
+  pointer-events: none;
+}
+.type-selector-screen .float-particle {
+  position: absolute; border-radius: 50%; pointer-events: none;
+  animation: float-up linear infinite;
+}
+.type-selector-screen .float-particle:nth-child(1) {
+  width: 6px; height: 6px; background: rgba(255,255,255,0.08);
+  left: 10%; bottom: -10px; animation-duration: 12s; animation-delay: 0s;
+}
+.type-selector-screen .float-particle:nth-child(2) {
+  width: 4px; height: 4px; background: rgba(255,255,255,0.06);
+  left: 30%; bottom: -10px; animation-duration: 15s; animation-delay: 2s;
+}
+.type-selector-screen .float-particle:nth-child(3) {
+  width: 8px; height: 8px; background: rgba(15,118,110,0.2);
+  left: 50%; bottom: -10px; animation-duration: 18s; animation-delay: 4s;
+}
+.type-selector-screen .float-particle:nth-child(4) {
+  width: 5px; height: 5px; background: rgba(245,158,11,0.15);
+  left: 70%; bottom: -10px; animation-duration: 14s; animation-delay: 1s;
+}
+.type-selector-screen .float-particle:nth-child(5) {
+  width: 7px; height: 7px; background: rgba(255,255,255,0.05);
+  left: 90%; bottom: -10px; animation-duration: 16s; animation-delay: 3s;
+}
+@keyframes float-up {
+  0% { transform: translateY(0) rotate(0deg); opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 0.5; }
+  100% { transform: translateY(-100vh) rotate(720deg); opacity: 0; }
+}
+.ts-card {
+  background: rgba(255,255,255,0.97); border-radius: 28px; padding: 48px 40px;
+  max-width: 520px; width: 100%; position: relative; z-index: 1;
+  box-shadow: 0 40px 80px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.05);
+  display: flex; flex-direction: column; gap: 32px;
+  animation: card-in 0.6s cubic-bezier(0.16,1,0.3,1);
+}
+@keyframes card-in { from { opacity: 0; transform: translateY(30px) scale(0.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
+.ts-header {
+  text-align: center;
+  .ts-emoji {
+    width: 64px; height: 64px; border-radius: 20px;
+    background: linear-gradient(135deg, $primary, $secondary);
+    color: white; font-size: 1.5rem;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 16px; box-shadow: 0 8px 24px rgba($primary,0.3);
+    animation: bounce-icon 2s ease-in-out infinite;
+  }
+  @keyframes bounce-icon { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+  h1 { font-size: 1.7rem; font-weight: 800; color: $primary-dark; margin: 0 0 10px; letter-spacing: -0.3px; }
+  p { font-size: 0.9rem; color: $text-secondary; margin: 0; line-height: 1.6; }
+}
+.ts-options { display: flex; flex-direction: column; gap: 12px; }
+.ts-option {
+  display: flex; align-items: center; gap: 18px; padding: 22px 24px;
+  background: white; border: 2px solid rgba($primary-dark, 0.06); border-radius: 18px;
+  cursor: pointer; text-align: left; transition: all 0.25s cubic-bezier(0.16,1,0.3,1);
+  position: relative; overflow: hidden;
+  &::before { content: ''; position: absolute; inset: 0; opacity: 0; background: linear-gradient(135deg, rgba($primary,0.03), rgba($secondary,0.02)); transition: opacity 0.3s; }
+  &:hover { border-color: $primary; box-shadow: 0 12px 32px rgba($primary, 0.15); transform: translateY(-3px) scale(1.01);
+    &::before { opacity: 1; }
+    .ts-icon { background: linear-gradient(135deg, $primary, $secondary); color: white; transform: scale(1.08) rotate(-5deg); }
+    .ts-arrow { color: $primary; transform: translateX(4px); }
+  }
+  &:active { transform: translateY(-1px) scale(0.99); }
+}
+.ts-icon {
+  width: 54px; height: 54px; border-radius: 16px;
+  background: linear-gradient(135deg, rgba($primary,0.08), rgba($secondary,0.04)); color: $primary;
+  display: flex; align-items: center; justify-content: center; font-size: 1.3rem; flex-shrink: 0;
+  transition: all 0.3s cubic-bezier(0.16,1,0.3,1); position: relative; z-index: 1;
+}
+.ts-info {
+  flex: 1; display: flex; flex-direction: column; gap: 4px; position: relative; z-index: 1;
+  strong { font-size: 1.05rem; font-weight: 700; color: $primary-dark; }
+  span { font-size: 0.82rem; color: $text-secondary; line-height: 1.35; }
+}
+.ts-arrow { color: rgba($primary-dark, 0.15); font-size: 0.9rem; transition: all 0.3s; position: relative; z-index: 1; }
 
 /* ── Root Layout ── */
 .ob-root {
@@ -299,45 +470,53 @@ onMounted(checkExisting)
 }
 .ob-logo-text { font-size: 0.92rem; font-weight: 600; strong { color: $primary; font-weight: 800; } }
 
-.ob-side-progress { display: flex; flex-direction: column; gap: 6px; }
-.ob-side-progress-track { height: 4px; background: rgba(255,255,255,0.1); border-radius: 99px; overflow: hidden; }
-.ob-side-progress-fill { height: 100%; background: linear-gradient(90deg, $primary, $secondary); border-radius: 99px; transition: width 0.5s cubic-bezier(0.16, 1, 0.3, 1); }
-.ob-side-progress-label { font-size: 0.7rem; font-weight: 700; color: rgba(255,255,255,0.5); letter-spacing: 0.3px; }
+.ob-side-progress { display: flex; flex-direction: column; gap: 8px; }
+.ob-side-progress-track { height: 6px; background: rgba(255,255,255,0.08); border-radius: 99px; overflow: visible; position: relative; }
+.ob-side-progress-fill { height: 100%; background: linear-gradient(90deg, $primary, $accent, $secondary); border-radius: 99px; transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1); position: relative; box-shadow: 0 0 12px rgba($primary,0.3); }
+.ob-milestone {
+  position: absolute; top: 50%; transform: translate(-50%,-50%); z-index: 2;
+  font-size: 0.45rem; color: rgba(255,255,255,0.15); transition: all 0.4s cubic-bezier(0.16,1,0.3,1);
+  &.reached { color: $accent; font-size: 0.55rem; filter: drop-shadow(0 0 6px rgba($accent,0.5)); }
+}
+.ob-side-progress-label { font-size: 0.7rem; font-weight: 700; color: rgba(255,255,255,0.45); letter-spacing: 0.3px; }
 
-.ob-side-nav { display: flex; flex-direction: column; gap: 4px; flex: 1; }
+.ob-side-nav { display: flex; flex-direction: column; gap: 3px; flex: 1; }
 .ob-side-item {
   display: flex; align-items: center; gap: 12px;
-  padding: 10px 12px; border-radius: 12px;
+  padding: 10px 12px; border-radius: 14px;
   background: transparent; border: none; cursor: pointer;
   text-align: left; font-family: inherit;
-  transition: all 0.2s;
+  transition: all 0.3s cubic-bezier(0.16,1,0.3,1);
+  position: relative;
   &:hover:not(:disabled) { background: rgba(255,255,255,0.06); }
   &.active {
-    background: linear-gradient(135deg, rgba($primary, 0.25), rgba($secondary, 0.15));
-    .ob-side-dot { background: linear-gradient(135deg, $primary, $secondary); color: white; border-color: transparent; }
+    background: linear-gradient(135deg, rgba($primary, 0.3), rgba($secondary, 0.15));
+    box-shadow: inset 0 0 0 1px rgba($primary, 0.3);
+    .ob-side-dot { background: linear-gradient(135deg, $primary, $secondary); color: white; border-color: transparent; transform: scale(1.1); box-shadow: 0 0 12px rgba($primary,0.4); }
     .ob-side-label { color: white; }
     .ob-side-desc { color: rgba(255,255,255,0.7); }
+    .ob-side-tag { color: $accent; }
   }
   &.done {
     .ob-side-dot { background: $alert-success; color: white; border-color: transparent; }
-    .ob-side-ok { color: $alert-success; opacity: 1; }
+    .ob-side-ok { color: $alert-success; opacity: 1; transform: scale(1); }
   }
-  &.locked { opacity: 0.4; cursor: not-allowed; }
+  &.locked { opacity: 0.35; cursor: not-allowed; }
   &:disabled { cursor: not-allowed; }
 }
 .ob-side-dot {
-  width: 32px; height: 32px; border-radius: 50%;
+  width: 34px; height: 34px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
-  background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.5);
+  background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.4);
   font-size: 0.75rem; flex-shrink: 0;
-  border: 1.5px solid rgba(255,255,255,0.12);
-  transition: all 0.25s;
+  border: 1.5px solid rgba(255,255,255,0.08);
+  transition: all 0.3s cubic-bezier(0.16,1,0.3,1);
 }
 .ob-side-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; line-height: 1.2; }
-.ob-side-tag { font-size: 0.6rem; font-weight: 700; letter-spacing: 0.6px; text-transform: uppercase; color: rgba(255,255,255,0.35); }
+.ob-side-tag { font-size: 0.6rem; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; color: rgba(255,255,255,0.3); transition: color 0.2s; }
 .ob-side-label { font-size: 0.88rem; font-weight: 700; color: rgba(255,255,255,0.85); transition: color 0.2s; }
-.ob-side-desc { font-size: 0.7rem; color: rgba(255,255,255,0.35); transition: color 0.2s; }
-.ob-side-ok { font-size: 0.85rem; opacity: 0; transition: opacity 0.3s; }
+.ob-side-desc { font-size: 0.7rem; color: rgba(255,255,255,0.3); transition: color 0.2s; }
+.ob-side-ok { font-size: 0.85rem; opacity: 0; transform: scale(0.5); transition: all 0.3s cubic-bezier(0.16,1,0.3,1); }
 
 .ob-side-foot { padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.08); }
 .ob-side-back {
@@ -350,20 +529,21 @@ onMounted(checkExisting)
 /* ══════ MAIN ══════ */
 .ob-main {
   flex: 1; display: flex; flex-direction: column;
-  min-width: 0; max-width: 680px; margin: 0 auto;
-  padding: 0 32px; width: 100%;
+  min-width: 0; padding: 0 56px;
+  max-width: 880px; width: 100%;
 }
 
 .ob-main-head {
   display: flex; align-items: flex-start; justify-content: space-between; gap: 16px;
-  padding: 40px 0 20px;
+  padding: 40px 0 24px;
 }
 .ob-main-head-left { min-width: 0; }
 .ob-main-eyebrow {
-  display: inline-block;
+  display: inline-flex; align-items: center; gap: 5px;
   font-size: 0.65rem; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase;
-  color: $primary; background: rgba($primary, 0.1);
-  padding: 4px 10px; border-radius: 999px; margin-bottom: 8px;
+  color: $primary; background: linear-gradient(135deg, rgba($primary,0.08), rgba($secondary,0.04));
+  border: 1px solid rgba($primary,0.12);
+  padding: 4px 12px; border-radius: 999px; margin-bottom: 10px;
 }
 .ob-main-title {
   margin: 0; font-size: 1.5rem; font-weight: 800; color: $primary-dark;
@@ -373,33 +553,93 @@ onMounted(checkExisting)
 .ob-main-desc { margin: 4px 0 0; font-size: 0.9rem; color: $text-secondary; }
 .ob-main-badge {
   display: inline-flex; align-items: center; justify-content: center;
-  width: 44px; height: 44px; border-radius: 14px;
-  background: linear-gradient(135deg, $primary, $secondary);
-  color: white; font-weight: 800; font-size: 0.85rem;
-  flex-shrink: 0; box-shadow: 0 6px 16px rgba($primary, 0.25);
+  width: 48px; height: 48px; border-radius: 16px;
+  background: linear-gradient(135deg, $primary-dark, $primary);
+  color: white; font-weight: 900; font-size: 0.85rem; letter-spacing: 0.5px;
+  flex-shrink: 0; box-shadow: 0 8px 20px rgba($primary, 0.3);
+  border: 1px solid rgba($primary, 0.3);
+  animation: badge-pulse 2s ease-in-out infinite;
 }
+@keyframes badge-pulse { 0%, 100% { box-shadow: 0 8px 20px rgba($primary,0.3); } 50% { box-shadow: 0 8px 28px rgba($primary,0.5); } }
 
 .ob-main-body {
   flex: 1; display: flex; flex-direction: column;
   overflow-y: auto; padding-bottom: 10px;
 }
 
-.ob-form-wrap { flex: 1; }
-.ob-fields { display: flex; flex-direction: column; gap: 14px; }
+.ob-form-wrap {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.ob-form-wrap :deep(.ob-fields) {
+  background: white;
+  border: 1px solid rgba($primary-dark, 0.07);
+  border-radius: 20px;
+  padding: 28px 32px;
+  box-shadow: 0 2px 12px rgba($primary-dark, 0.04);
+}
+
+.ob-form-wrap :deep(.ob-field) {
+  gap: 6px;
+}
+
+.ob-form-wrap :deep(.ob-field label) {
+  font-size: 0.85rem;
+}
+
+.ob-form-wrap :deep(.ob-field input),
+.ob-form-wrap :deep(.ob-field select) {
+  padding: 14px 16px;
+  font-size: 0.95rem;
+  border-radius: 12px;
+}
+
+.ob-form-wrap :deep(.ob-row) {
+  gap: 16px;
+}
+
+.ob-form-wrap :deep(.ob-subsection) {
+  padding: 24px;
+  border-radius: 16px;
+  background: rgba($primary-dark, 0.015);
+  border: 1px solid rgba($primary-dark, 0.04);
+}
+
+.ob-fields { display: flex; flex-direction: column; gap: 16px; }
 
 .ob-field {
-  display: flex; flex-direction: column; gap: 5px;
-  label { font-size: 0.8rem; font-weight: 700; color: $primary-dark; }
-  input, select {
-    padding: 12px 14px; font-size: 0.9rem;
-    border: 1.5px solid rgba($primary-dark, 0.1); border-radius: 10px;
-    background: white; outline: none; font-family: inherit;
-    transition: border-color 0.2s, box-shadow 0.2s;
-    &:focus { border-color: $primary; box-shadow: 0 0 0 3px rgba($primary, 0.1); }
-    &::placeholder { color: rgba($primary-dark, 0.2); }
+  display: flex; flex-direction: column; gap: 6px;
+  label {
+    font-size: 0.82rem; font-weight: 700; color: $primary-dark;
+    display: flex; align-items: center; gap: 5px;
+    transition: color 0.2s;
   }
-  select { cursor: pointer; appearance: none; background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'><path fill='%236b7280' d='M6 7L0 1l1.5-1L6 4.5 10.5 0 12 1z'/></svg>"); background-repeat: no-repeat; background-position: right 14px center; background-size: 10px 6px; padding-right: 32px; }
+  input, select {
+    padding: 14px 16px; font-size: 0.95rem;
+    border: 1.5px solid rgba($primary-dark, 0.1); border-radius: 12px;
+    background: white; outline: none; font-family: inherit;
+    transition: all 0.25s cubic-bezier(0.16,1,0.3,1);
+    &:focus {
+      border-color: $primary;
+      box-shadow: 0 0 0 4px rgba($primary, 0.1), 0 2px 8px rgba($primary-dark, 0.04);
+      background: #fafeff;
+    }
+    &::placeholder { color: rgba($primary-dark, 0.2); font-weight: 500; }
+    &:hover:not(:focus) { border-color: rgba($primary-dark, 0.2); }
+  }
+  select {
+    cursor: pointer; appearance: none;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 10'><path fill='%230F766E' d='M7 8L1 2l1.5-1.5L7 5 11.5.5 13 2z'/></svg>");
+    background-repeat: no-repeat; background-position: right 16px center; background-size: 12px 8px;
+    padding-right: 40px; font-weight: 600; color: $primary-dark;
+    background-color: #fafbfc;
+    &:focus { background-color: white; }
+    &:hover:not(:focus) { background-color: #f8fafb; }
+  }
 }
+.ob-field:focus-within label { color: $primary; }
 
 .ob-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 
@@ -507,11 +747,21 @@ onMounted(checkExisting)
   input:checked + .tg-slider::before { transform: translateX(18px); }
 }
 
-/* ── Done screen ── */
-.ob-done { align-items: center; text-align: center; padding: 40px 0; }
-.ob-done-icon { font-size: 3.5rem; color: $alert-success; margin-bottom: 8px; }
-.ob-done-title { margin: 0; font-size: 1.3rem; font-weight: 800; color: $primary-dark; }
-.ob-done-desc { font-size: 0.88rem; color: $text-secondary; margin: 4px 0 24px; }
+/* ── Done screen (achievement unlocked!) ── */
+.ob-done {
+  align-items: center; text-align: center; padding: 40px 0;
+  position: relative;
+}
+.ob-done::before {
+  content: '\f560'; font-family: 'Font Awesome 6 Free'; font-weight: 900;
+  position: absolute; top: -10px; right: -10px; font-size: 2.5rem; color: $primary;
+  animation: confetti-burst 0.6s cubic-bezier(0.16,1,0.3,1) both;
+}
+@keyframes confetti-burst { from { transform: scale(0) rotate(-30deg); opacity: 0; } to { transform: scale(1) rotate(0); opacity: 1; } }
+.ob-done-icon { font-size: 4rem; color: $alert-success; margin-bottom: 8px; animation: done-icon 0.8s cubic-bezier(0.16,1,0.3,1); }
+@keyframes done-icon { from { transform: scale(0) rotate(-20deg); } to { transform: scale(1) rotate(0); } }
+.ob-done-title { margin: 0; font-size: 1.4rem; font-weight: 800; color: $primary-dark; }
+.ob-done-desc { font-size: 0.9rem; color: $text-secondary; margin: 4px 0 24px; }
 .ob-done-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; max-width: 400px; }
 .ob-done-item {
   display: flex; align-items: center; gap: 8px; padding: 12px;
@@ -524,38 +774,42 @@ onMounted(checkExisting)
 .ob-main-foot {
   display: flex; align-items: center; justify-content: space-between;
   padding: 20px 0; padding-bottom: max(20px, env(safe-area-inset-bottom));
-  border-top: 1px solid rgba($primary-dark, 0.06);
-  margin-top: 16px;
+  border-top: 1.5px solid rgba($primary-dark, 0.05);
+  margin-top: 16px; position: relative; z-index: 1;
 }
 .ob-main-foot-left { min-width: 120px; }
 
 .ob-btn {
   display: inline-flex; align-items: center; gap: 8px;
-  padding: 12px 24px; border-radius: 12px;
-  font-family: inherit; font-weight: 800; font-size: 0.88rem;
-  cursor: pointer; border: none; transition: all 0.2s;
-  &:active:not(:disabled) { transform: scale(0.97); }
-  &:disabled { opacity: 0.45; cursor: not-allowed; }
+  padding: 14px 28px; border-radius: 14px;
+  font-family: inherit; font-weight: 800; font-size: 0.9rem;
+  cursor: pointer; border: none;
+  transition: all 0.25s cubic-bezier(0.16,1,0.3,1);
+  &:active:not(:disabled) { transform: scale(0.95); }
+  &:disabled { opacity: 0.4; cursor: not-allowed; }
 }
 .ob-btn-primary {
   background: linear-gradient(135deg, $primary, $secondary); color: white;
-  box-shadow: 0 4px 14px rgba($primary, 0.3);
-  &:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 8px 20px rgba($primary, 0.35); }
+  box-shadow: 0 4px 16px rgba($primary, 0.3);
+  &:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 10px 28px rgba($primary, 0.4); }
+  &:active:not(:disabled) { transform: translateY(0) scale(0.97); }
+  i { transition: transform 0.25s; }
+  &:hover:not(:disabled) i { transform: translateX(3px); }
 }
 .ob-btn-ghost {
-  background: transparent; color: $text-secondary;
-  &:hover { color: $primary-dark; background: rgba($primary-dark, 0.04); }
+  background: transparent; color: $text-secondary; padding: 14px 20px;
+  &:hover { color: $primary-dark; background: rgba($primary-dark, 0.04); transform: translateX(-3px); }
 }
 
 /* ── Transitions ── */
 .slide-l-enter-active, .slide-l-leave-active,
 .slide-r-enter-active, .slide-r-leave-active {
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all 0.45s cubic-bezier(0.16, 1, 0.3, 1);
 }
-.slide-l-enter-from { opacity: 0; transform: translateX(30px); }
-.slide-l-leave-to { opacity: 0; transform: translateX(-30px); }
-.slide-r-enter-from { opacity: 0; transform: translateX(-30px); }
-.slide-r-leave-to { opacity: 0; transform: translateX(30px); }
+.slide-l-enter-from { opacity: 0; transform: translateX(40px) scale(0.97); }
+.slide-l-leave-to { opacity: 0; transform: translateX(-40px) scale(0.97); }
+.slide-r-enter-from { opacity: 0; transform: translateX(-40px) scale(0.97); }
+.slide-r-leave-to { opacity: 0; transform: translateX(40px) scale(0.97); }
 
 /* ══════ RESPONSIVE ══════ */
 @media (max-width: 820px) {

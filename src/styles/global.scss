@@ -2,12 +2,13 @@
 @use './fonts.module.scss' as *;
 
 html, body {
-  background-color: $white;
+  background-color: $bg;
   margin: 0;
   font-family: $font-principal;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overscroll-behavior: none;
+  color: $text;
 }
 
 body {
@@ -16,17 +17,14 @@ body {
 }
 
 :root {
-  --bg: #{$white};
-  --text: #{$primary-dark};
-  --border: #{rgba($primary-dark, 0.08)};
-  --accent: #{$primary};
-}
-
-[data-theme='dark'] {
-  --bg: #{$primary-dark};
-  --text: #{$text-light};
-  --border: #{rgba($white, 0.12)};
-  --accent: #{$primary};
+  --bg: #{$bg};
+  --surface: #{$surface};
+  --text: #{$text};
+  --text-secondary: #{$text-secondary};
+  --border: #{$border};
+  --primary: #{$primary};
+  --accent: #{$accent};
+  --radius-md: #{$radius-md};
 }
 
 * {
@@ -35,7 +33,6 @@ body {
 
 input[type='number'] {
   -moz-appearance: textfield;
-
   &::-webkit-outer-spin-button,
   &::-webkit-inner-spin-button {
     -webkit-appearance: none;
@@ -50,4 +47,32 @@ a {
 
 button {
   font-family: inherit;
+  cursor: pointer;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+// ── Scrollbar ──
+@media print {
+  .sidebar, .topbar, .bottom-nav, .scrim, .icon-btn, .action-btn, .quick-actions, .btn-primary, .alert-toggle { display: none !important; }
+  .shell { grid-template-columns: 1fr !important; }
+  .main { padding-bottom: 0 !important; }
+  .page { padding: 0 !important; }
+  body { background: white !important; }
+  * { color: black !important; box-shadow: none !important; text-shadow: none !important; }
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(26, 46, 53, 0.15);
+  border-radius: 99px;
+  &:hover { background: rgba(26, 46, 53, 0.25); }
 }

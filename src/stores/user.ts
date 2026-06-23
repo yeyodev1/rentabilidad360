@@ -84,7 +84,6 @@ export const useUserStore = defineStore('user', {
     },
 
     async fetchWorkspace() {
-      if (!this.workspaceIds.length) return
       try {
         const res = await workspaceService.getCurrentWorkspace()
         const ws = res.data.workspace

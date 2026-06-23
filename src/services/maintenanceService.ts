@@ -8,6 +8,8 @@ interface EquipmentData {
   usefulLife: number
   maintenanceIntervalDays: number
   notes?: string
+  imageUrl?: string
+  location?: string
 }
 
 interface MaintenanceTicket {
@@ -45,6 +47,10 @@ class MaintenanceService extends APIBase {
 
   async scanQR(qrCode: string) {
     return this.get(`maintenance/scan/${qrCode}`)
+  }
+
+  async checkOverdue() {
+    return this.post('maintenance/overdue/check', {})
   }
 
   async listTickets(equipmentId?: string) {

@@ -24,6 +24,12 @@ const routes: Array<RouteRecordRaw> = [
     meta: { title: 'Crear cuenta · Rentabilidad360' },
   },
   {
+    path: '/verify',
+    name: 'Verify',
+    component: () => import('../views/VerifyView.vue'),
+    meta: { title: 'Verificar correo · Rentabilidad360' },
+  },
+  {
     path: '/dashboard',
     name: 'Dashboard',
     component: () => import('../views/DashboardView.vue'),
@@ -31,9 +37,7 @@ const routes: Array<RouteRecordRaw> = [
   },
   {
     path: '/modulos',
-    name: 'Modules',
-    component: () => import('../views/ModulesHubView.vue'),
-    meta: { title: 'Mis módulos · Rentabilidad360', requiresAuth: true },
+    redirect: '/dashboard',
   },
   {
     path: '/configuracion/workspace',
@@ -102,7 +106,21 @@ const routes: Array<RouteRecordRaw> = [
     meta: { title: 'Optimización de Personal · Rentabilidad360', requiresAuth: true },
   },
   {
-    path: '/:catchAll(.*)',
+    path: '/admin',
+    name: 'Admin',
+    component: () => import('../views/AdminView.vue'),
+    meta: { title: 'Administración · Rentabilidad360', requiresAuth: true },
+  },
+  {
+    path: '/settings/integrations',
+    name: 'Integrations',
+    component: () => import('@/views/SettingsIntegrationsView.vue'),
+    meta: {
+      requiresAuth: true,
+    },
+  },
+  {
+    path: '/:pathMatch(.*)*',
     redirect: '/',
   },
 ]
