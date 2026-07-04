@@ -2,6 +2,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useUIStore } from '@/stores/ui'
+import { useUserStore } from '@/stores/user'
 import AppShell from '@/layout/AppShell.vue'
 import { maintenanceService } from '@/services/maintenanceService'
 import EquipmentForm from '@/components/EquipmentForm.vue'
@@ -16,17 +17,21 @@ interface Ticket {
   status: string
   assignedTo?: string
   createdAt: string
+  updatedAt?: string
   resolutionNotes?: string
+  reportedByName?: string
 }
 
 const route = useRoute()
 const router = useRouter()
 const ui = useUIStore()
+const userStore = useUserStore()
 
 const equipment = ref<any>(null)
 const tickets = ref<Ticket[]>([])
 const loading = ref(true)
 const qrCodeUrl = ref('')
+const qrPublicUrl = ref('')
 const qrLoading = ref(false)
 const showReportForm = ref(false)
 const reportForm = ref({ description: '', priority: 'media' as Ticket['priority'] })
@@ -35,8 +40,15 @@ const showEditForm = ref(false)
 const deleting = ref(false)
 const selectedTicket = ref<Ticket | null>(null)
 const resolutionNotes = ref('')
+const hasSession = ref(false)
 
 const equipmentId = computed(() => route.params.id as string)
+const isPublicAudit = computed(() => !hasSession.value)
+const branches = computed(() => userStore.branches)
+const branchDisplay = computed(() => {
+  if (!equipment.value) return ''
+  return equipment.value.branchName || branches.value.find((branch) => branch.id === equipment.value.branchId)?.name || ''
+})
 
 const purchaseDate = computed(() => equipment.value ? new Date(equipment.value.purchaseDate) : null)
 
@@ -73,16 +85,32 @@ function statusLabel(s: string): string {
   return map[s] || s
 }
 
+function formatMonth(iso: string): string {
+  return new Date(iso).toLocaleDateString('es-EC', { month: 'long', year: 'numeric' })
+}
+
+function actorName(ticket: Ticket): string {
+  return ticket.reportedByName || 'Equipo Allio'
+}
+
+async function requireAccess() {
+  const ok = await ui.requestConfirm({
+    title: 'Acceso requerido',
+    message: 'Puedes ver la auditoría del equipo sin login. Para registrar movimientos, fallas o cierres necesitas iniciar sesión o pedir a un administrador que te registre.',
+    confirmLabel: 'Iniciar sesión',
+    cancelLabel: 'Solo ver historial',
+    icon: 'fa-solid fa-lock',
+  })
+  if (ok) router.push({ name: 'Login', query: { next: route.fullPath } })
+}
+
 async function generateQR() {
   if (!equipment.value) return
-  if (equipment.value.qrCode) {
-    qrCodeUrl.value = equipment.value.qrCode
-    return
-  }
   qrLoading.value = true
   try {
     const res = await maintenanceService.generateQR(equipment.value._id)
     qrCodeUrl.value = (res.data as any).qrCode || ''
+    qrPublicUrl.value = (res.data as any).url || `${window.location.origin}/modulo/mantenimiento/${equipment.value._id}`
     equipment.value.qrCode = qrCodeUrl.value
   } catch {
     ui.showToast({ title: 'Error al generar QR', tone: 'error' })
@@ -91,8 +119,10 @@ async function generateQR() {
   }
 }
 
-function printSticker() {
-  if (!equipment.value?.qrCode) return
+async function printSticker() {
+  if (!equipment.value) return
+  await generateQR()
+  if (!equipment.value.qrCode) return
   const d = equipment.value
   const win = window.open('', '_blank')
   if (!win) return
@@ -108,6 +138,7 @@ function printSticker() {
       .sticker .loc { font-size: 11px; color: #666; margin-bottom: 8px; }
       .sticker img { width: 200px; height: 200px; display: block; margin: 0 auto 8px; }
       .sticker p { font-size: 11px; color: #666; }
+      .sticker .url { font-size: 8px; color: #888; overflow-wrap: anywhere; margin-top: 6px; }
       @media print {
         @page { margin: 6mm; size: 57mm 57mm; }
         body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
@@ -117,9 +148,11 @@ function printSticker() {
     <body>
       <div class="sticker">
         <h2>${d.name}</h2>
+        ${d.branchName ? `<p class="loc">${d.branchName}</p>` : ''}
         ${d.location ? `<p class="loc">${d.location}</p>` : ''}
         <img src="${d.qrCode}" alt="QR" />
-        <p>Escanea para ver mantenimiento</p>
+        <p>Escanea para ver ficha técnica</p>
+        ${qrPublicUrl.value ? `<p class="url">${qrPublicUrl.value}</p>` : ''}
       </div>
       <script>window.print();window.close();<\/script>
     </body>
@@ -129,6 +162,10 @@ function printSticker() {
 }
 
 async function submitReport() {
+  if (isPublicAudit.value) {
+    await requireAccess()
+    return
+  }
   if (!equipment.value || !reportForm.value.description.trim()) {
     ui.showToast({ title: 'Describe el problema', tone: 'warning' })
     return
@@ -153,20 +190,29 @@ async function submitReport() {
 
 async function handleSave(data: any) {
   if (!equipment.value) return
-  try {
-    await maintenanceService.updateEquipment(equipment.value._id, data)
-    ui.showToast({ title: 'Equipo actualizado', tone: 'success' })
-    showEditForm.value = false
-    const res = await maintenanceService.getEquipmentDetail(equipmentId.value)
-    equipment.value = res.data
-  } catch {
-    ui.showToast({ title: 'Error al actualizar', tone: 'error' })
-  }
+  await maintenanceService.updateEquipment(equipment.value._id, data)
+  const res = await maintenanceService.getEquipmentDetail(equipmentId.value)
+  equipment.value = res.data
+  await loadTickets()
+  return { mode: 'edit', eq: equipment.value }
+}
+
+function handleFormSaved() {
+  showEditForm.value = false
+  ui.showToast({ title: 'Equipo actualizado', tone: 'success' })
 }
 
 async function handleDelete() {
   if (!equipment.value) return
-  if (!confirm('¿Eliminar este equipo? Esta acción no se puede deshacer.')) return
+  const ok = await ui.requestConfirm({
+    title: 'Confirmar eliminación',
+    message: 'Este equipo saldrá del control de mantenimiento. Confirma solo si ya no necesitas su ficha ni su QR activo.',
+    confirmLabel: 'Sí, eliminar',
+    cancelLabel: 'Conservar equipo',
+    tone: 'danger',
+    icon: 'fa-solid fa-trash-can',
+  })
+  if (!ok) return
   deleting.value = true
   try {
     await maintenanceService.deleteEquipment(equipment.value._id)
@@ -185,6 +231,10 @@ async function openTicket(t: Ticket) {
 }
 
 async function closeTicket() {
+  if (isPublicAudit.value) {
+    await requireAccess()
+    return
+  }
   if (!selectedTicket.value) return
   try {
     await maintenanceService.updateTicket(selectedTicket.value._id, { status: 'cerrado', resolutionNotes: resolutionNotes.value || 'Sin notas' })
@@ -197,6 +247,7 @@ async function closeTicket() {
 }
 
 async function loadTickets() {
+  if (isPublicAudit.value) return
   try {
     const res = await maintenanceService.listTickets(equipmentId.value)
     tickets.value = res.data as Ticket[]
@@ -206,14 +257,23 @@ async function loadTickets() {
 }
 
 onMounted(async () => {
+  hasSession.value = !!localStorage.getItem('access_token')
   try {
-    const res = await maintenanceService.getEquipmentDetail(equipmentId.value)
-    equipment.value = res.data
-    if (!equipment.value.qrCode) await generateQR()
+    if (hasSession.value) {
+      if (!userStore.branches.length) await userStore.fetchWorkspace()
+      const res = await maintenanceService.getEquipmentDetail(equipmentId.value)
+      equipment.value = res.data
+      await generateQR()
+      await loadTickets()
+    } else {
+      const res = await maintenanceService.getPublicEquipmentAudit(equipmentId.value)
+      const audit = res.data as any
+      equipment.value = audit.equipment
+      tickets.value = audit.history || []
+    }
   } catch {
     // API unavailable
   }
-  await loadTickets()
   loading.value = false
 })
 </script>
@@ -222,10 +282,10 @@ onMounted(async () => {
   <AppShell>
     <div class="page">
       <header class="top-bar">
-        <button class="back" @click="router.push('/modulo/mantenimiento')">
-          <i class="fa-solid fa-arrow-left" /> Volver
+        <button class="back" @click="isPublicAudit ? router.push('/') : router.push('/modulo/mantenimiento')">
+          <i class="fa-solid fa-arrow-left" /> {{ isPublicAudit ? 'Allio' : 'Volver' }}
         </button>
-        <div class="top-actions" v-if="equipment">
+        <div class="top-actions" v-if="equipment && !isPublicAudit">
           <PrintButton title="Ficha de equipo" />
           <button class="btn icon ghost" @click="showEditForm = true" title="Editar equipo">
             <i class="fa-solid fa-pen-to-square" />
@@ -252,7 +312,9 @@ onMounted(async () => {
               <h1 class="hero-title">{{ equipment.name }}</h1>
               <p v-if="equipment.brand" class="hero-brand">{{ equipment.brand }}</p>
               <div class="hero-tags">
+                <span v-if="isPublicAudit" class="audit-badge"><i class="fa-solid fa-eye" /> Auditoría pública</span>
                 <span :class="['status-badge', equipment.status]">{{ statusLabel(equipment.status) }}</span>
+                <span v-if="branchDisplay" class="branch-badge"><i class="fa-solid fa-store" /> {{ branchDisplay }}</span>
                 <span v-if="equipment.location" class="location-badge"><i class="fa-solid fa-location-dot" /> {{ equipment.location }}</span>
               </div>
             </div>
@@ -262,8 +324,8 @@ onMounted(async () => {
 
         <section class="info-grid">
           <div class="info-card">
-            <span class="info-label">Compra</span>
-            <strong class="info-value">{{ formatDate(equipment.purchaseDate) }}</strong>
+            <span class="info-label">Compra aprox.</span>
+            <strong class="info-value">{{ formatMonth(equipment.purchaseDate) }}</strong>
           </div>
           <div class="info-card">
             <span class="info-label">Costo</span>
@@ -281,6 +343,23 @@ onMounted(async () => {
             <span class="info-label">Ubicación</span>
             <strong class="info-value" style="font-size: .85rem">{{ equipment.location }}</strong>
           </div>
+          <div class="info-card" v-if="branchDisplay">
+            <span class="info-label">Sucursal</span>
+            <strong class="info-value" style="font-size: .85rem">{{ branchDisplay }}</strong>
+          </div>
+          <div class="info-card" v-if="equipment.createdAt">
+            <span class="info-label">Registrado</span>
+            <strong class="info-value" style="font-size: .85rem">{{ formatDate(equipment.createdAt) }}</strong>
+          </div>
+        </section>
+
+        <section v-if="isPublicAudit" class="public-audit-card">
+          <span class="public-icon"><i class="fa-solid fa-shield-halved" /></span>
+          <div>
+            <strong>Historial visible por QR</strong>
+            <p>Esta ficha es de solo lectura. Para registrar movimientos, fallas o mantenimientos, inicia sesión o solicita a un administrador que te registre.</p>
+          </div>
+          <button class="btn primary sm" @click="requireAccess"><i class="fa-solid fa-right-to-bracket" /> Registrar movimiento</button>
         </section>
 
         <section class="depr-section">
@@ -298,23 +377,27 @@ onMounted(async () => {
         </section>
 
         <section class="qr-section">
-          <div class="qr-display" v-if="equipment.qrCode">
+          <div class="qr-display" v-if="equipment.qrCode && !isPublicAudit">
             <img :src="equipment.qrCode" alt="QR del equipo" class="qr-img" />
             <span class="qr-hint">Escanea para ver la ficha técnica</span>
+            <a v-if="qrPublicUrl" class="qr-link" :href="qrPublicUrl" target="_blank" rel="noopener">{{ qrPublicUrl }}</a>
             <button class="btn ghost sm" @click="printSticker">
               <i class="fa-solid fa-tag" /> Imprimir sticker
             </button>
           </div>
-          <button v-else class="btn primary" @click="generateQR" :disabled="qrLoading">
+          <button v-else-if="!isPublicAudit" class="btn primary" @click="generateQR" :disabled="qrLoading">
             <i class="fa-solid fa-qrcode" /> {{ qrLoading ? 'Generando...' : 'Generar QR' }}
           </button>
         </section>
 
         <section class="tickets-section">
           <header class="sec-head">
-            <h3><i class="fa-solid fa-ticket" /> Tickets ({{ tickets.length }})</h3>
-            <button class="btn ghost sm" @click="showReportForm = !showReportForm">
+            <h3><i class="fa-solid fa-clock-rotate-left" /> Historial ({{ tickets.length }})</h3>
+            <button v-if="!isPublicAudit" class="btn ghost sm" @click="showReportForm = !showReportForm">
               <i class="fa-solid fa-plus" /> Reportar
+            </button>
+            <button v-else class="btn ghost sm" @click="requireAccess">
+              <i class="fa-solid fa-lock" /> Registrar movimiento
             </button>
           </header>
 
@@ -345,7 +428,7 @@ onMounted(async () => {
 
           <div v-if="!tickets.length" class="empty-state">
             <i class="fa-solid fa-circle-check empty-icon" />
-            <p>Sin tickets de mantenimiento</p>
+              <p>Sin movimientos registrados</p>
           </div>
 
           <div v-else class="ticket-list">
@@ -357,6 +440,7 @@ onMounted(async () => {
               <p class="ticket-desc">{{ t.title || t.description }}</p>
               <div class="ticket-meta">
                 <span><i class="fa-solid fa-calendar" /> {{ formatDate(t.createdAt) }}</span>
+                <span><i class="fa-solid fa-user" /> {{ actorName(t) }}</span>
               </div>
             </article>
           </div>
@@ -364,7 +448,7 @@ onMounted(async () => {
       </template>
     </div>
 
-    <EquipmentForm v-if="showEditForm && equipment" :equipment="equipment" @close="showEditForm = false" @save="handleSave" />
+    <EquipmentForm v-if="showEditForm && equipment" :equipment="equipment" :branches="branches" :save-action="handleSave" @close="showEditForm = false" @saved="handleFormSaved" />
 
     <Teleport to="body">
       <div v-if="selectedTicket" class="modal-back" @click.self="selectedTicket = null">
@@ -386,6 +470,10 @@ onMounted(async () => {
               <span class="lbl">Creado</span>
               <span>{{ formatDate(selectedTicket.createdAt) }}</span>
             </div>
+            <div class="td-row">
+              <span class="lbl">Registrado por</span>
+              <span>{{ actorName(selectedTicket) }}</span>
+            </div>
             <div class="td-desc">
               <span class="lbl">Descripción</span>
               <p>{{ selectedTicket.description }}</p>
@@ -394,12 +482,15 @@ onMounted(async () => {
               <span class="lbl">Resolución</span>
               <p class="res-text">{{ selectedTicket.resolutionNotes }}</p>
             </div>
-            <div class="td-desc" v-if="selectedTicket.status !== 'cerrado' && selectedTicket.status !== 'resuelto'">
+            <div class="td-desc" v-if="!isPublicAudit && selectedTicket.status !== 'cerrado' && selectedTicket.status !== 'resuelto'">
               <label class="lbl">Notas de cierre</label>
               <textarea v-model="resolutionNotes" class="inp" rows="2" placeholder="Describe cómo se resolvió..." />
             </div>
-            <button v-if="selectedTicket.status !== 'cerrado' && selectedTicket.status !== 'resuelto'" class="btn primary" @click="closeTicket">
+            <button v-if="!isPublicAudit && selectedTicket.status !== 'cerrado' && selectedTicket.status !== 'resuelto'" class="btn primary" @click="closeTicket">
               <i class="fa-solid fa-check" /> Cerrar ticket
+            </button>
+            <button v-else-if="isPublicAudit" class="btn primary" @click="requireAccess">
+              <i class="fa-solid fa-lock" /> Iniciar sesión para registrar cambios
             </button>
           </div>
         </div>
@@ -460,6 +551,31 @@ onMounted(async () => {
   background: rgba($primary, 0.08); color: $primary-dark;
   i { font-size: 0.65rem; color: $primary; }
 }
+.branch-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 0.7rem; font-weight: 800; padding: 4px 10px; border-radius: 999px;
+  background: rgba($accent, 0.16); color: $primary-dark;
+  i { font-size: 0.65rem; color: $primary; }
+}
+.audit-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 0.7rem; font-weight: 850; padding: 4px 10px; border-radius: 999px;
+  background: rgba($primary-dark, 0.08); color: $primary-dark;
+  i { font-size: 0.65rem; color: $primary; }
+}
+
+.public-audit-card {
+  margin: 0 12px; padding: 14px; border-radius: 18px;
+  display: grid; grid-template-columns: 44px 1fr; gap: 12px; align-items: center;
+  background: linear-gradient(135deg, rgba($primary, 0.1), rgba(white, 0.92));
+  border: 1px solid rgba($primary, 0.16);
+  box-shadow: 0 14px 32px rgba($primary-dark, 0.055);
+  @media (min-width: $bp-mobile) { margin: 0 16px; grid-template-columns: 48px 1fr auto; padding: 16px; }
+  strong { color: $primary-dark; font-size: 0.92rem; }
+  p { margin: 3px 0 0; color: $text-secondary; font-size: 0.82rem; line-height: 1.45; }
+  .btn { grid-column: 1 / -1; justify-content: center; @media (min-width: $bp-mobile) { grid-column: auto; } }
+}
+.public-icon { width: 44px; height: 44px; border-radius: 15px; display: grid; place-items: center; color: white; background: linear-gradient(135deg, $primary-dark, $primary); box-shadow: 0 12px 24px rgba($primary, 0.2); }
 
 .info-grid { padding: 0 12px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
   @media (min-width: $bp-mobile) { padding: 0 16px; gap: 10px; }
@@ -489,6 +605,7 @@ onMounted(async () => {
   @media (min-width: $bp-mobile) { width: 180px; height: 180px; }
 }
 .qr-hint { font-size: 0.78rem; color: $text-secondary; }
+.qr-link { max-width: min(100%, 360px); padding: 8px 10px; border-radius: 12px; background: rgba($primary-dark, 0.05); color: $primary; font-size: 0.72rem; font-weight: 800; overflow-wrap: anywhere; text-align: center; text-decoration: none; &:hover { background: rgba($primary, 0.1); } }
 
 .btn {
   display: inline-flex; align-items: center; gap: 8px;

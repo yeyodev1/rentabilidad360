@@ -3,12 +3,11 @@ import { ref, computed, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import AppShell from '@/layout/AppShell.vue'
 import { onboardingService } from '@/services/onboardingService'
+import { tiendaService } from '@/services/tiendaService'
 import { workspaceService } from '@/services/workspaceService'
-import { useOnboardingStore, type Tienda } from '@/stores/onboarding'
 import { useUserStore } from '@/stores/user'
 import { useUIStore } from '@/stores/ui'
 
-const store = useOnboardingStore()
 const userStore = useUserStore()
 const ui = useUIStore()
 
@@ -29,7 +28,7 @@ const hasData = computed(() => !!editForm.value?.legalName)
 
 onMounted(() => {
   userStore.hydrate()
-  document.title = 'Workspace · Rentabilidad360'
+  document.title = 'Workspace · Allio'
   loadWorkspace()
 })
 
@@ -97,6 +96,23 @@ async function saveWorkspace() {
 const drawerOpen = ref(false)
 const drawerMode = ref<'create' | 'edit'>('create')
 const editingId = ref<string | null>(null)
+const savingTienda = ref(false)
+
+interface Tienda {
+  id: string
+  name: string
+  businessType: string | null
+  address: string
+  city: string
+  manager: string
+  phone: string
+  status: 'active' | 'paused' | 'opening'
+  staff: number
+  monthlyClients: number
+  notes: string
+  createdAt?: string
+  isMain: boolean
+}
 
 const businessTypes = [
   { id: 'restaurante', label: 'Restaurante', icon: 'fa-solid fa-burger' },
@@ -115,7 +131,7 @@ const statusOptions = [
 
 const tiendaForm = ref<Partial<Tienda>>({
   name: '',
-  businessType: store.businessType,
+  businessType: null,
   address: '',
   city: '',
   manager: '',
@@ -126,12 +142,31 @@ const tiendaForm = ref<Partial<Tienda>>({
   notes: '',
 })
 
+const tiendas = computed<Tienda[]>(() =>
+  userStore.branches.map((b) => ({
+    id: b.id,
+    name: b.name,
+    businessType: null,
+    address: b.address || '',
+    city: '',
+    manager: '',
+    phone: b.phone || '',
+    status: 'active',
+    staff: 0,
+    monthlyClients: 0,
+    notes: '',
+    isMain: b.isMain,
+  })),
+)
+
+const activeTiendaId = computed(() => userStore.mainBranch?.id ?? tiendas.value[0]?.id ?? null)
+
 function openCreate() {
   drawerMode.value = 'create'
   editingId.value = null
   tiendaForm.value = {
     name: '',
-    businessType: store.businessType,
+    businessType: null,
     address: '',
     city: '',
     manager: '',
@@ -155,29 +190,64 @@ function closeDrawer() {
   drawerOpen.value = false
 }
 
-function saveTienda() {
+async function saveTienda() {
   const f = tiendaForm.value
   if (!f.name?.trim()) {
     ui.showToast({ title: 'Necesitas un nombre para la tienda', tone: 'warning' })
     return
   }
-  if (drawerMode.value === 'create') {
-    const t = store.addTienda(f)
+  savingTienda.value = true
+  try {
+    if (drawerMode.value === 'create') {
+      const res = await tiendaService.create({
+        name: f.name,
+        businessType: f.businessType,
+        address: f.address,
+        city: f.city,
+        manager: f.manager,
+        phone: f.phone,
+        status: f.status,
+        staff: f.staff,
+        monthlyClients: f.monthlyClients,
+        notes: f.notes,
+      })
+      await userStore.fetchWorkspace()
+      const t = res.data
+      ui.showToast({
+        title: 'Tienda agregada',
+        message: `${t.name} ya está activa en tu workspace.`,
+        tone: 'success',
+        icon: 'fa-solid fa-store',
+      })
+    } else if (editingId.value) {
+      await tiendaService.update(editingId.value, {
+        name: f.name,
+        businessType: f.businessType,
+        address: f.address,
+        city: f.city,
+        manager: f.manager,
+        phone: f.phone,
+        status: f.status,
+        staff: f.staff,
+        monthlyClients: f.monthlyClients,
+        notes: f.notes,
+      })
+      await userStore.fetchWorkspace()
+      ui.showToast({ title: 'Tienda actualizada', tone: 'success' })
+    }
+    closeDrawer()
+  } catch {
     ui.showToast({
-      title: 'Tienda agregada',
-      message: `${t.name} ya está activa en tu workspace.`,
-      tone: 'success',
-      icon: 'fa-solid fa-store',
+      title: 'No se pudo guardar la tienda',
+      tone: 'error',
     })
-  } else if (editingId.value) {
-    store.updateTienda(editingId.value, f)
-    ui.showToast({ title: 'Tienda actualizada', tone: 'success' })
+  } finally {
+    savingTienda.value = false
   }
-  closeDrawer()
 }
 
 async function deleteTienda(t: Tienda) {
-  if (store.tiendas.length <= 1) {
+  if (tiendas.value.length <= 1) {
     ui.showToast({
       title: 'No puedes eliminar la única tienda',
       message: 'Crea otra antes de borrar esta.',
@@ -194,25 +264,34 @@ async function deleteTienda(t: Tienda) {
     icon: 'fa-solid fa-trash',
   })
   if (!ok) return
-  store.removeTienda(t.id)
-  ui.showToast({ title: 'Tienda eliminada', tone: 'info' })
+  try {
+    await tiendaService.remove(t.id)
+    await userStore.fetchWorkspace()
+    ui.showToast({ title: 'Tienda eliminada', tone: 'info' })
+  } catch {
+    ui.showToast({ title: 'No se pudo eliminar la tienda', tone: 'error' })
+  }
 }
 
-function setMain(t: Tienda) {
-  store.tiendas.forEach((x) => store.updateTienda(x.id, { isMain: x.id === t.id }))
-  ui.showToast({ title: `${t.name} es ahora tu tienda principal`, tone: 'success' })
+async function setMain(t: Tienda) {
+  try {
+    await tiendaService.setMain(t.id)
+    await userStore.fetchWorkspace()
+    ui.showToast({ title: `${t.name} es ahora tu tienda principal`, tone: 'success' })
+  } catch {
+    ui.showToast({ title: 'No se pudo cambiar la tienda principal', tone: 'error' })
+  }
 }
 
 function activate(t: Tienda) {
-  store.setActiveTienda(t.id)
   ui.showToast({ title: `Mostrando datos de ${t.name}`, tone: 'info', icon: 'fa-solid fa-store' })
 }
 
 const totals = computed(() => ({
-  count: userStore.branches.length,
-  staff: 0,
-  clients: 0,
-  active: userStore.branches.length,
+  count: tiendas.value.length,
+  staff: tiendas.value.reduce((sum, t) => sum + (t.staff || 0), 0),
+  clients: tiendas.value.reduce((sum, t) => sum + (t.monthlyClients || 0), 0),
+  active: tiendas.value.filter((t) => t.status === 'active').length,
 }))
 
 function statusMeta(s: Tienda['status']) {
@@ -221,7 +300,8 @@ function statusMeta(s: Tienda['status']) {
 </script>
 
 <template>
-  <AppShell>
+  <div class="workspace-view">
+    <AppShell>
     <div class="ws-page">
       <header class="page-head">
         <div>
@@ -366,12 +446,12 @@ function statusMeta(s: Tienda['status']) {
               <h2><i class="fa-solid fa-store" /> Tiendas del workspace</h2>
               <p>Cambia entre tiendas para filtrar el contenido del resto del app.</p>
             </div>
-            <button v-if="store.tiendas.length > 0" class="btn primary sm" type="button" @click="openCreate">
+            <button v-if="tiendas.length > 0" class="btn primary sm" type="button" @click="openCreate">
               <i class="fa-solid fa-plus" /> Agregar
             </button>
           </header>
 
-          <section v-if="store.tiendas.length === 0" class="empty-state">
+          <section v-if="tiendas.length === 0" class="empty-state">
             <div class="es-illust" aria-hidden="true">
               <i class="fa-solid fa-store" />
               <i class="fa-solid fa-lightbulb" />
@@ -404,9 +484,9 @@ function statusMeta(s: Tienda['status']) {
 
           <ul v-else class="tienda-list">
             <li
-              v-for="t in store.tiendas"
+              v-for="t in tiendas"
               :key="t.id"
-              :class="['tienda-row', { active: store.activeTiendaId === t.id }]"
+              :class="['tienda-row', { active: activeTiendaId === t.id }]"
             >
               <button class="tienda-pick" type="button" @click="activate(t)" :title="`Activar ${t.name}`">
                 <span :class="['tienda-ico', t.status]">
@@ -416,7 +496,7 @@ function statusMeta(s: Tienda['status']) {
                   <div class="tienda-title">
                     <strong>{{ t.name }}</strong>
                     <span v-if="t.isMain" class="badge main"><i class="fa-solid fa-star" /> Principal</span>
-                    <span v-if="store.activeTiendaId === t.id" class="badge active-b"><i class="fa-solid fa-eye" /> Viendo</span>
+                    <span v-if="activeTiendaId === t.id" class="badge active-b"><i class="fa-solid fa-eye" /> Viendo</span>
                   </div>
                   <div class="tienda-meta">
                     <span><i class="fa-solid fa-location-dot" /> {{ t.address || 'Sin dirección' }}{{ t.city ? ', ' + t.city : '' }}</span>
@@ -449,7 +529,7 @@ function statusMeta(s: Tienda['status']) {
                   class="row-btn danger"
                   @click="deleteTienda(t)"
                   title="Eliminar"
-                  :disabled="store.tiendas.length <= 1"
+                  :disabled="tiendas.length <= 1"
                 >
                   <i class="fa-solid fa-trash" />
                 </button>
@@ -457,7 +537,7 @@ function statusMeta(s: Tienda['status']) {
             </li>
           </ul>
 
-          <button v-if="store.tiendas.length > 0" class="add-btn" type="button" @click="openCreate">
+          <button v-if="tiendas.length > 0" class="add-btn" type="button" @click="openCreate">
             <i class="fa-solid fa-plus" />
             <span>
               <strong>Agregar otra tienda</strong>
@@ -468,6 +548,8 @@ function statusMeta(s: Tienda['status']) {
         </article>
       </section>
     </div>
+
+    </AppShell>
 
     <Teleport to="body">
       <Transition name="drawer">
@@ -562,16 +644,17 @@ function statusMeta(s: Tienda['status']) {
 
             <footer class="drawer-foot">
               <button class="btn ghost" type="button" @click="closeDrawer">Cancelar</button>
-              <button class="btn primary" type="button" @click="saveTienda">
-                <i :class="drawerMode === 'create' ? 'fa-solid fa-plus' : 'fa-solid fa-check'" />
-                {{ drawerMode === 'create' ? 'Crear tienda' : 'Guardar cambios' }}
+              <button class="btn primary" type="button" :disabled="savingTienda" @click="saveTienda">
+                <i v-if="savingTienda" class="fa-solid fa-spinner fa-spin" />
+                <i v-else :class="drawerMode === 'create' ? 'fa-solid fa-plus' : 'fa-solid fa-check'" />
+                {{ savingTienda ? 'Guardando…' : drawerMode === 'create' ? 'Crear tienda' : 'Guardar cambios' }}
               </button>
             </footer>
           </aside>
         </div>
       </Transition>
     </Teleport>
-  </AppShell>
+  </div>
 </template>
 
 <style scoped lang="scss">

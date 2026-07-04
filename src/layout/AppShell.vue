@@ -7,7 +7,7 @@ import NavPreview from '@/components/NavPreview.vue'
 import WorkspaceSettingsModal from '@/components/WorkspaceSettingsModal.vue'
 import AccountSettingsModal from '@/components/AccountSettingsModal.vue'
 
-type NavKind = 'panel' | 'diagnostico' | 'sanitario' | 'checklists' | 'mantenimiento' | 'costeo' | 'horarios'
+type NavKind = 'diagnostico' | 'mantenimiento' | 'costeo'
 
 const router = useRouter()
 const route = useRoute()
@@ -58,8 +58,6 @@ const initials = computed(() => {
   return (parts[0]?.slice(0, 2) || 'OP').toUpperCase()
 })
 
-const userRole = computed(() => localStorage.getItem('user_role'))
-
 interface NavItem {
   to: string
   matches: string[]
@@ -75,10 +73,10 @@ const nav = computed<NavItem[]>(() => [
     ? {
         to: '/dashboard',
         matches: ['/dashboard', '/modulos'],
-        icon: 'fa-solid fa-chart-pie',
-        label: 'Dashboard',
+        icon: 'fa-solid fa-house',
+        label: 'Inicio',
         kind: 'diagnostico',
-        hint: 'KPIs en tiempo real',
+        hint: 'Resumen del negocio',
       }
     : {
         to: '/onboarding',
@@ -89,12 +87,8 @@ const nav = computed<NavItem[]>(() => [
         hint: 'Configurar mi negocio',
         ribbon: 'Empezar',
       },
-  { to: '/modulo/sanitario', matches: ['/modulo/sanitario'], icon: 'fa-solid fa-clipboard-list', label: 'Sanitario', kind: 'sanitario', hint: 'Semáforo Arcsa' },
-  { to: '/modulo/checklists', matches: ['/modulo/checklists'], icon: 'fa-solid fa-clipboard-check', label: 'Checklists', kind: 'checklists', hint: 'Formato · revisión' },
-  { to: '/modulo/mantenimiento', matches: ['/modulo/mantenimiento'], icon: 'fa-solid fa-screwdriver-wrench', label: 'Mantenimiento', kind: 'mantenimiento', hint: 'QR · fichas' },
-  { to: '/modulo/costeo', matches: ['/modulo/costeo'], icon: 'fa-solid fa-sack-dollar', label: 'Costeo', kind: 'costeo', hint: 'Recetas' },
-  { to: '/modulo/horarios', matches: ['/modulo/horarios'], icon: 'fa-solid fa-calendar-week', label: 'Horarios', kind: 'horarios', hint: 'Turnos' },
-  ...(userRole.value === 'admin' ? [{ to: '/admin', matches: ['/admin'], icon: 'fa-solid fa-shield-halved', label: 'Admin', kind: 'panel' as NavKind, hint: 'Historial y alertas' }] : []),
+  { to: '/modulo/costeo', matches: ['/modulo/costeo'], icon: 'fa-solid fa-sack-dollar', label: 'Costeo', kind: 'costeo', hint: 'Platos y precios' },
+  { to: '/modulo/mantenimiento', matches: ['/modulo/mantenimiento'], icon: 'fa-solid fa-screwdriver-wrench', label: 'Mantenimiento', kind: 'mantenimiento', hint: 'QR · tickets' },
 ])
 
 const activeNav = computed(() => {
@@ -145,8 +139,7 @@ function upgrade() {
         <RouterLink to="/" class="brand">
           <span class="brand-mark"><i class="fa-solid fa-chart-pie" /></span>
           <span class="brand-text">
-            <strong>Rentabilidad</strong>
-            <span>360</span>
+            <strong>Allio</strong>
           </span>
         </RouterLink>
 
@@ -310,9 +303,7 @@ function upgrade() {
       </header>
 
       <div class="page">
-        <Transition name="page-fade" mode="out-in">
-          <slot />
-        </Transition>
+        <slot />
       </div>
     </main>
 

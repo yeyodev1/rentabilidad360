@@ -5,11 +5,11 @@ class UploadService extends APIBase {
     const formData = new FormData()
     formData.append('file', file)
     formData.append('folder', folder)
-    return this.post('upload', formData, {})
+    return this.post('upload', formData)
   }
 
   async deleteImage(publicId: string) {
-    return this.delete('upload', { data: { publicId } } as any)
+    return this.delete('upload', undefined, { data: { publicId } })
   }
 }
 

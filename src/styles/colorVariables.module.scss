@@ -1,32 +1,32 @@
 // ═══════════════════════════════════════════
-// Rentabilidad360 — Design Tokens 2026
-// Paleta "Sol y Mar"
+// Allio — Design Tokens
+// Paleta de marca: dark cyan / yellow green / midnight violet / sea shell
 // ═══════════════════════════════════════════
 
 // ── Brand ──
-$primary: #0F766E;
-$primary-dark: #0C1222;
-$primary-light: #14B8A6;
+$primary: #588B8B; // dark cyan
+$primary-dark: #2F243A; // midnight violet
+$primary-light: #7BA3A3;
 $primary-bg: rgba($primary, 0.08);
-$primary-gradient: linear-gradient(135deg, #0F766E, #14B8A6);
+$primary-gradient: linear-gradient(135deg, #588B8B, #7BA3A3);
 
 // ── Secondary (gradient partner) ──
-$secondary: #14B8A6;
+$secondary: #7BA3A3;
 
-// ── Warm accent (restaurants) ──
-$accent: #F59E0B;
-$accent-dark: #D97706;
-$accent-light: #FCD34D;
+// ── Accent (CTAs / success highlights) ──
+$accent: #8AC926; // yellow green
+$accent-dark: #6FA01D;
+$accent-light: #ACDD5E;
 
 // ── Surfaces ──
 $white: #FFFFFF;
-$bg: #F0F5F4;
+$bg: #FFF6EE; // sea shell
 $surface: #FFFFFF;
-$text: #1A2E35;
-$text-secondary: #6B7F8B;
-$text-light: #F0F5F4;
-$border: rgba(26, 46, 53, 0.08);
-$border-hover: rgba(26, 46, 53, 0.15);
+$text: #2F243A; // midnight violet
+$text-secondary: rgba(47, 36, 58, 0.6);
+$text-light: #FFF6EE;
+$border: rgba(47, 36, 58, 0.08);
+$border-hover: rgba(47, 36, 58, 0.15);
 
 // ── Status / Alerts ──
 $alert-success: #10B981;

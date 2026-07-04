@@ -142,7 +142,7 @@ async function handleRegister() {
   align-items: center;
   justify-content: center;
   padding: 24px;
-  background: linear-gradient(160deg, #f8fbff, #eef5fc 60%, #ffffff);
+  background: linear-gradient(160deg, $bg, #fbefe0 60%, #ffffff);
   overflow: hidden;
 }
 

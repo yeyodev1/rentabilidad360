@@ -10,6 +10,7 @@ interface EquipmentData {
   notes?: string
   imageUrl?: string
   location?: string
+  branchId?: string
 }
 
 interface MaintenanceTicket {
@@ -41,6 +42,10 @@ class MaintenanceService extends APIBase {
     return this.get(`maintenance/equipment/${id}`)
   }
 
+  async getPublicEquipmentAudit(id: string) {
+    return this.get(`maintenance/public/equipment/${id}`)
+  }
+
   async generateQR(id: string) {
     return this.post(`maintenance/equipment/${id}/qr`, {})
   }
@@ -53,8 +58,11 @@ class MaintenanceService extends APIBase {
     return this.post('maintenance/overdue/check', {})
   }
 
-  async listTickets(equipmentId?: string) {
-    const params = equipmentId ? `?equipmentId=${equipmentId}` : ''
+  async listTickets(equipmentId?: string, branchId?: string) {
+    const searchParams = new URLSearchParams()
+    if (equipmentId) searchParams.set('equipmentId', equipmentId)
+    if (branchId) searchParams.set('branchId', branchId)
+    const params = searchParams.toString() ? `?${searchParams.toString()}` : ''
     return this.get(`maintenance/tickets${params}`)
   }
 

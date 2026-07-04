@@ -10,7 +10,7 @@ const props = defineProps({
 
 const emit = defineEmits(['update:modelValue'])
 
-const showGuide = ref(true)
+const showGuide = ref(false)
 
 function addItem() {
   const updatedValue = JSON.parse(JSON.stringify(props.modelValue))
@@ -53,20 +53,11 @@ function updateItem(i: string | number, field: string, value: any) {
 
 <template>
   <div class="ob-equipment-container">
-    <!-- Step Helper Info Banner -->
-    <div class="flow-helper-banner">
-      <div class="banner-intro">
-        <div class="banner-icon-wrapper">
-          <i class="fa-solid fa-screwdriver-wrench" />
-        </div>
-        <div class="banner-body">
-          <h4 class="banner-title">Depreciación y Mantenimiento de Equipos</h4>
-          <p class="banner-text">
-            Registra la maquinaria y equipos de tu negocio (ej: hornos, refrigeradores, sistemas POS). Esto permite calcular automáticamente la depreciación mensual y programar alertas de mantenimiento preventivo.
-          </p>
-        </div>
-      </div>
-    </div>
+    <!-- Step Helper hint -->
+    <p class="ob-hint-line">
+      <i class="fa-solid fa-circle-info" />
+      Cada equipo genera automáticamente un QR para su historial de mantenimiento.
+    </p>
 
     <!-- Suggested Estimates Expandable Box -->
     <div class="estimates-guide-card" :class="{ 'is-expanded': showGuide }">
@@ -110,13 +101,13 @@ function updateItem(i: string | number, field: string, value: any) {
             </div>
           </div>
 
-          <!-- Tech/POS -->
+          <!-- Extraction -->
           <div class="guide-item">
-            <span class="guide-icon-wrap"><i class="fa-solid fa-computer" /></span>
+            <span class="guide-icon-wrap"><i class="fa-solid fa-wind" /></span>
             <div class="guide-item-info">
-              <strong>Sistemas POS y Computadoras</strong>
-              <span>Vida Útil: 4 a 5 Años</span>
-              <span>Mantenimiento: Cada 365 Días (1 año)</span>
+              <strong>Extractores y Campanas de Cocina</strong>
+              <span>Vida Útil: 8 Años</span>
+              <span>Mantenimiento: Cada 180 Días (6 meses)</span>
             </div>
           </div>
         </div>
@@ -537,15 +528,12 @@ function updateItem(i: string | number, field: string, value: any) {
   display: flex;
   flex-direction: column;
   gap: 20px;
-  background: white;
-  border: 1px solid rgba($primary-dark, 0.08);
-  border-radius: 24px;
-  padding: 16px;
-  box-shadow: 0 10px 30px rgba($primary-dark, 0.02);
+}
 
-  @media (min-width: 600px) {
-    padding: 24px;
-  }
+.ob-hint-line {
+  display: flex; align-items: center; gap: 8px;
+  margin: 0; font-size: 0.82rem; color: $text-secondary;
+  i { color: $primary; }
 }
 
 /* Top bar with count & add button */

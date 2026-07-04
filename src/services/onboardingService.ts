@@ -11,7 +11,7 @@ class OnboardingService extends APIBase {
   }
 
   async getProgress() {
-    return this.get<{ currentStep: number; completedSteps: number[]; data: Record<string, unknown>; isComplete: boolean; hasCompany: boolean; companyName: string | null; onboardingType?: string }>('onboarding/progress')
+    return this.get<{ currentStep: number; completedSteps: number[]; data: Record<string, unknown>; isComplete: boolean; hasCompany: boolean; companyName: string | null; businessStage?: 'new' | 'existing' | null }>('onboarding/progress')
   }
 
   async completeOnboarding() {

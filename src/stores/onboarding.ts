@@ -25,7 +25,7 @@ export function getCurrencySymbol(code: string): string {
   return CURRENCY_SYMBOLS[code as CurrencyCode] || '$'
 }
 
-export type PainPointId = 'sanitary' | 'maintenance' | 'costing' | 'schedule'
+export type PainPointId = 'maintenance' | 'costing'
 
 export interface PainPoint {
   id: PainPointId
@@ -38,36 +38,20 @@ export interface PainPoint {
 
 export const PAIN_POINTS: PainPoint[] = [
   {
-    id: 'sanitary',
-    title: 'Inspecciones y Formatos',
-    description: 'Me da terror una inspección sanitaria (Arcsa) o mi equipo no llena las hojas de limpieza.',
-    icon: 'fa-solid fa-clipboard-list',
-    route: '/modulo/sanitario',
-    ctaLabel: 'Control Sanitario',
+    id: 'costing',
+    title: 'Costos y Precios',
+    description: 'No sé el costo real de mis platos ni a qué precio debería venderlos para tener finanzas sanas.',
+    icon: 'fa-solid fa-sack-dollar',
+    route: '/modulo/costeo',
+    ctaLabel: 'Costeo de Platos',
   },
   {
     id: 'maintenance',
     title: 'Mantenimiento y Equipos',
-    description: 'Las máquinas se dañan sin aviso y no sé cuánto se devalúan.',
+    description: 'Las máquinas se dañan sin aviso y no tengo un historial rápido de su mantenimiento.',
     icon: 'fa-solid fa-screwdriver-wrench',
     route: '/modulo/mantenimiento',
     ctaLabel: 'Mantenimiento Pro',
-  },
-  {
-    id: 'costing',
-    title: 'Costos y Recetas',
-    description: 'No sé el costo real de mis platos ni mi punto de equilibrio.',
-    icon: 'fa-solid fa-sack-dollar',
-    route: '/modulo/costeo',
-    ctaLabel: 'Costeo de Recetas',
-  },
-  {
-    id: 'schedule',
-    title: 'Ventas y Horarios',
-    description: 'Mis ventas bajan a ciertas horas y no sé cómo organizar los turnos de mi personal.',
-    icon: 'fa-solid fa-chart-line',
-    route: '/modulo/horarios',
-    ctaLabel: 'Optimización de Turnos',
   },
 ]
 

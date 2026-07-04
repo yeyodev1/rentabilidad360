@@ -23,22 +23,22 @@ function scrollTo(id: string) {
 
 const stats = [
   { value: '+30%', label: 'Margen recuperado por costeo correcto' },
-  { value: '<60s', label: 'Diagnóstico instantáneo de rentabilidad' },
-  { value: '4', label: 'Módulos operativos para cocina y piso' },
+  { value: '<60s', label: 'Precio sugerido instantáneo por plato' },
+  { value: '2', label: 'Módulos: Costeo y Mantenimiento' },
 ]
 
 const features = [
-  { icon: 'fa-solid fa-stethoscope', title: 'Diagnóstico EBITDA en 1 minuto', desc: 'Responde 5 pasos y te devolvemos margen, punto de equilibrio y semáforo de salud.' },
+  { icon: 'fa-solid fa-sack-dollar', title: 'Precio sugerido por plato', desc: 'Ingresa el costo de tu plato y te damos un rango de precio, meta de venta mensual y vigencia.' },
   { icon: 'fa-solid fa-mobile-screen-button', title: 'Pensado para cocina y piso', desc: 'Botones grandes, una mano, sin fricción. Listo para empleados y dueños.' },
-  { icon: 'fa-solid fa-bell', title: 'Alertas en tu correo', desc: 'Notificaciones por email cuando algo requiere tu atención.' },
-  { icon: 'fa-solid fa-qrcode', title: 'QR en cada equipo', desc: 'Escanea la licuadora industrial y abre su ficha técnica al instante.' },
+  { icon: 'fa-solid fa-qrcode', title: 'QR en cada equipo', desc: 'Escanea la licuadora industrial y abre su ficha técnica e historial al instante.' },
+  { icon: 'fa-solid fa-screwdriver-wrench', title: 'Historial de mantenimiento', desc: 'Cada ticket queda registrado para que nunca pierdas la trazabilidad del equipo.' },
 ]
 
 const steps = [
-  { icon: 'fa-solid fa-clipboard-question', title: 'Cuéntanos tu negocio', desc: 'Nombre, tipo y tu mayor dolor.' },
-  { icon: 'fa-solid fa-calculator', title: 'Costos y ventas', desc: 'Inversión, precio promedio y clientes mensuales.' },
-  { icon: 'fa-solid fa-chart-pie', title: 'Diagnóstico', desc: 'Recibe tu semáforo financiero y módulos prioritarios.' },
-  { icon: 'fa-solid fa-unlock-keyhole', title: 'Operativa diaria', desc: 'Activa sanidad, mantenimiento, costeo y turnos.' },
+  { icon: 'fa-solid fa-clipboard-question', title: 'Cuéntanos tu negocio', desc: '¿Proyecto nuevo o negocio existente? Empresa y sucursal.' },
+  { icon: 'fa-solid fa-calculator', title: 'Costos fijos', desc: 'Renta, nómina, servicios básicos e internet.' },
+  { icon: 'fa-solid fa-sack-dollar', title: 'Platos y equipos', desc: 'Costo de tus platos y equipos a dar mantenimiento.' },
+  { icon: 'fa-solid fa-unlock-keyhole', title: 'Operativa diaria', desc: 'Activa costeo con precio sugerido y mantenimiento con QR.' },
 ]
 </script>
 
@@ -47,7 +47,7 @@ const steps = [
     <header class="nav">
       <div class="nav-brand">
         <span class="brand-mark"><i class="fa-solid fa-chart-pie" /></span>
-        <span class="brand-name">Rentabilidad360</span>
+        <span class="brand-name">Allio</span>
       </div>
       <nav class="nav-links">
         <button class="nav-link" @click="scrollTo('caracteristicas')">Características</button>
@@ -77,8 +77,8 @@ const steps = [
           antes de que termine el mes.
         </h1>
         <p class="hero-sub">
-          Diagnóstico financiero rápido + módulos operativos: inspecciones sanitarias,
-          mantenimiento por QR, costeo de recetas y turnos del personal.
+          Costeo simple de tus platos con precio sugerido, y mantenimiento de
+          equipos por QR con historial rápido de trazabilidad.
         </p>
         <div class="hero-ctas">
           <button class="cta-main" @click="startDemo">
@@ -193,7 +193,7 @@ const steps = [
     <footer class="footer">
       <span class="footer-brand">
         <span class="brand-mark sm"><i class="fa-solid fa-chart-pie" /></span>
-        Rentabilidad360
+        Allio
       </span>
       <span class="footer-copy">© {{ new Date().getFullYear() }}</span>
       <span class="footer-links">

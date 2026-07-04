@@ -13,13 +13,34 @@ export interface RecipeIngredientData {
   quantity: number
 }
 
+export interface PriceSuggestion {
+  cost: number
+  suggestedMinPrice: number
+  suggestedMaxPrice: number
+  monthlyFixedCosts: number
+  fixedCostShare: number
+  monthlyUnitsTarget: number | null
+  validityDays: number
+  priceValidUntil: string
+}
+
 export interface RecipeData {
   _id?: string
   name: string
-  sellingPrice: number
-  ingredients: RecipeIngredientData[]
+  /** Manual PVP, only if the dish is already sold. Optional — the app can suggest a price instead. */
+  sellingPrice?: number
+  /** Simple total production cost (the "simple costing" flow) — mutually exclusive with ingredients. */
+  productionCost?: number
+  ingredients?: RecipeIngredientData[]
   wastePercentage?: number
   isActive?: boolean
+  validityDays?: number
+}
+
+export interface RecipeWithSuggestion extends RecipeData {
+  cost: number
+  suggestion: PriceSuggestion
+  priceValidUntil?: string
 }
 
 class CostingService extends APIBase {
@@ -47,6 +68,11 @@ class CostingService extends APIBase {
 
   async deleteRecipe(id: string) {
     return this.delete(`costing/recipes/${id}`)
+  }
+
+  // Price suggestion preview (no persistence)
+  async estimatePrice(productionCost: number, validityDays?: number) {
+    return this.post<PriceSuggestion>('costing/estimate', { productionCost, validityDays })
   }
 }
 

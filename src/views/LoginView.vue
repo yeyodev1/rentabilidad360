@@ -53,7 +53,7 @@ async function handleLogin() {
       </RouterLink>
 
       <div class="brand-badge">
-        <i class="fa-solid fa-chart-pie" /> Rentabilidad360
+        <i class="fa-solid fa-chart-pie" /> Allio
       </div>
 
       <h1 class="auth-title">Bienvenido de vuelta</h1>
