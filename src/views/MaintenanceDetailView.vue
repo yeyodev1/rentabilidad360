@@ -22,6 +22,24 @@ interface Ticket {
   reportedByName?: string
 }
 
+interface EquipmentChecklist {
+  _id: string
+  items: Array<{ key: string; label: string; checked: boolean; notes?: string }>
+  generalNotes?: string
+  result: 'completo' | 'requiere_atencion'
+  completedBy?: { name?: string }
+  createdAt: string
+}
+
+const checklistTemplate = [
+  { key: 'limpieza', label: 'Limpieza general y superficies', checked: false },
+  { key: 'funcionamiento', label: 'Encendido y funcionamiento normal', checked: false },
+  { key: 'conexiones', label: 'Conexiones eléctricas o de gas seguras', checked: false },
+  { key: 'fugas', label: 'Sin fugas, ruidos ni vibraciones', checked: false },
+  { key: 'protecciones', label: 'Guardas y protecciones instaladas', checked: false },
+  { key: 'entorno', label: 'Área despejada y ventilada', checked: false },
+]
+
 const route = useRoute()
 const router = useRouter()
 const ui = useUIStore()
@@ -41,6 +59,11 @@ const deleting = ref(false)
 const selectedTicket = ref<Ticket | null>(null)
 const resolutionNotes = ref('')
 const hasSession = ref(false)
+const checklists = ref<EquipmentChecklist[]>([])
+const showChecklistForm = ref(false)
+const checklistItems = ref(checklistTemplate.map((item) => ({ ...item })))
+const checklistNotes = ref('')
+const checklistSending = ref(false)
 
 const equipmentId = computed(() => route.params.id as string)
 const isPublicAudit = computed(() => !hasSession.value)
@@ -81,7 +104,7 @@ function priorityClass(p: string): string {
 }
 
 function statusLabel(s: string): string {
-  const map: Record<string, string> = { abierto: 'Abierto', en_progreso: 'En progreso', resuelto: 'Resuelto', cerrado: 'Cerrado' }
+  const map: Record<string, string> = { abierto: 'Abierto', en_progreso: 'En progreso', resuelto: 'Resuelto', cerrado: 'Cerrado', operativo: 'Operativo', averiado: 'Averiado', mantenimiento: 'En mantenimiento', fuera_servicio: 'Fuera de servicio' }
   return map[s] || s
 }
 
@@ -134,11 +157,11 @@ async function printSticker() {
       * { margin: 0; padding: 0; box-sizing: border-box; }
       body { display: flex; justify-content: center; align-items: center; min-height: 100vh; font-family: Arial, sans-serif; }
       .sticker { text-align: center; padding: 24px; max-width: 300px; }
-      .sticker h2 { font-size: 14px; color: #333; margin-bottom: 12px; }
-      .sticker .loc { font-size: 11px; color: #666; margin-bottom: 8px; }
+      .sticker h2 { font-size: 14px; color: #2F243A; margin-bottom: 12px; }
+      .sticker .loc { font-size: 11px; color: #588B8B; margin-bottom: 8px; }
       .sticker img { width: 200px; height: 200px; display: block; margin: 0 auto 8px; }
-      .sticker p { font-size: 11px; color: #666; }
-      .sticker .url { font-size: 8px; color: #888; overflow-wrap: anywhere; margin-top: 6px; }
+      .sticker p { font-size: 11px; color: #2F243A; }
+      .sticker .url { font-size: 8px; color: #588B8B; overflow-wrap: anywhere; margin-top: 6px; }
       @media print {
         @page { margin: 6mm; size: 57mm 57mm; }
         body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
@@ -236,13 +259,50 @@ async function closeTicket() {
     return
   }
   if (!selectedTicket.value) return
+  const transitions: Record<string, string> = { abierto: 'en_progreso', en_progreso: 'resuelto', resuelto: 'cerrado' }
+  const nextStatus = transitions[selectedTicket.value.status]
+  if (!nextStatus) return
   try {
-    await maintenanceService.updateTicket(selectedTicket.value._id, { status: 'cerrado', resolutionNotes: resolutionNotes.value || 'Sin notas' })
-    ui.showToast({ title: 'Ticket cerrado', tone: 'success' })
+    await maintenanceService.updateTicket(selectedTicket.value._id, { status: nextStatus, resolutionNotes: resolutionNotes.value || 'Sin notas' })
+    ui.showToast({ title: nextStatus === 'cerrado' ? 'Ticket cerrado' : 'Estado actualizado', tone: 'success' })
     selectedTicket.value = null
     await loadTickets()
   } catch {
     ui.showToast({ title: 'Error al cerrar ticket', tone: 'error' })
+  }
+}
+
+function ticketActionLabel(status: string) {
+  const labels: Record<string, string> = { abierto: 'Iniciar mantenimiento', en_progreso: 'Marcar como resuelto', resuelto: 'Cerrar ticket' }
+  return labels[status] || ''
+}
+
+async function loadChecklists() {
+  if (isPublicAudit.value) return
+  try {
+    const res = await maintenanceService.listChecklists(equipmentId.value)
+    checklists.value = res.data as EquipmentChecklist[]
+  } catch {
+    checklists.value = []
+  }
+}
+
+async function submitChecklist() {
+  checklistSending.value = true
+  try {
+    await maintenanceService.createChecklist(equipmentId.value, {
+      items: checklistItems.value,
+      generalNotes: checklistNotes.value.trim(),
+    })
+    ui.showToast({ title: 'Checklist guardado', tone: 'success', icon: 'fa-solid fa-clipboard-check' })
+    checklistItems.value = checklistTemplate.map((item) => ({ ...item }))
+    checklistNotes.value = ''
+    showChecklistForm.value = false
+    await loadChecklists()
+  } catch {
+    ui.showToast({ title: 'No se pudo guardar el checklist', tone: 'error' })
+  } finally {
+    checklistSending.value = false
   }
 }
 
@@ -265,6 +325,7 @@ onMounted(async () => {
       equipment.value = res.data
       await generateQR()
       await loadTickets()
+      await loadChecklists()
     } else {
       const res = await maintenanceService.getPublicEquipmentAudit(equipmentId.value)
       const audit = res.data as any
@@ -287,10 +348,10 @@ onMounted(async () => {
         </button>
         <div class="top-actions" v-if="equipment && !isPublicAudit">
           <PrintButton title="Ficha de equipo" />
-          <button class="btn icon ghost" @click="showEditForm = true" title="Editar equipo">
+          <button v-if="userStore.canManageEquipment" class="btn icon ghost" @click="showEditForm = true" title="Editar equipo">
             <i class="fa-solid fa-pen-to-square" />
           </button>
-          <button class="btn icon danger-ghost" @click="handleDelete" :disabled="deleting" title="Eliminar">
+          <button v-if="userStore.canDeleteEquipment" class="btn icon danger-ghost" @click="handleDelete" :disabled="deleting" title="Eliminar">
             <i class="fa-solid fa-trash-can" />
           </button>
         </div>
@@ -390,6 +451,55 @@ onMounted(async () => {
           </button>
         </section>
 
+        <section v-if="!isPublicAudit" class="checklist-section">
+          <header class="sec-head">
+            <div>
+              <span class="section-kicker">Control operativo</span>
+              <h3><i class="fa-solid fa-clipboard-check" /> Checklist del equipo</h3>
+            </div>
+            <button class="btn primary sm" @click="showChecklistForm = !showChecklistForm">
+              <i class="fa-solid fa-list-check" /> {{ showChecklistForm ? 'Ocultar' : 'Llenar checklist' }}
+            </button>
+          </header>
+
+          <Transition name="fade">
+            <form v-if="showChecklistForm" class="checklist-form" @submit.prevent="submitChecklist">
+              <p>Marca cada punto que se encuentre correcto. Los puntos pendientes quedarán visibles como atención requerida.</p>
+              <label v-for="item in checklistItems" :key="item.key" class="check-row">
+                <input v-model="item.checked" type="checkbox" />
+                <span class="check-box"><i class="fa-solid fa-check" /></span>
+                <strong>{{ item.label }}</strong>
+              </label>
+              <label class="field">
+                <span class="lbl">Observaciones</span>
+                <textarea v-model="checklistNotes" class="inp" rows="3" placeholder="Novedades, acciones pendientes o recomendaciones..." />
+              </label>
+              <div class="report-actions">
+                <button type="button" class="btn ghost sm" @click="showChecklistForm = false">Cancelar</button>
+                <button type="submit" class="btn primary sm" :disabled="checklistSending">
+                  <i class="fa-solid fa-floppy-disk" /> {{ checklistSending ? 'Guardando...' : 'Guardar checklist' }}
+                </button>
+              </div>
+            </form>
+          </Transition>
+
+          <div v-if="checklists.length" class="checklist-history">
+            <article v-for="checklist in checklists.slice(0, 5)" :key="checklist._id" class="checklist-record">
+              <span :class="['check-result', checklist.result]">
+                <i :class="checklist.result === 'completo' ? 'fa-solid fa-circle-check' : 'fa-solid fa-triangle-exclamation'" />
+                {{ checklist.result === 'completo' ? 'Completo' : 'Requiere atención' }}
+              </span>
+              <strong>{{ checklist.items.filter((item) => item.checked).length }}/{{ checklist.items.length }} puntos correctos</strong>
+              <span>{{ formatDate(checklist.createdAt) }} · {{ checklist.completedBy?.name || 'Supervisor' }}</span>
+              <p v-if="checklist.generalNotes">{{ checklist.generalNotes }}</p>
+            </article>
+          </div>
+          <div v-else-if="!showChecklistForm" class="checklist-empty">
+            <i class="fa-solid fa-clipboard" />
+            <span>Aún no hay controles. Completa el primer checklist de este equipo.</span>
+          </div>
+        </section>
+
         <section class="tickets-section">
           <header class="sec-head">
             <h3><i class="fa-solid fa-clock-rotate-left" /> Historial ({{ tickets.length }})</h3>
@@ -482,12 +592,12 @@ onMounted(async () => {
               <span class="lbl">Resolución</span>
               <p class="res-text">{{ selectedTicket.resolutionNotes }}</p>
             </div>
-            <div class="td-desc" v-if="!isPublicAudit && selectedTicket.status !== 'cerrado' && selectedTicket.status !== 'resuelto'">
-              <label class="lbl">Notas de cierre</label>
+            <div class="td-desc" v-if="!isPublicAudit && selectedTicket.status !== 'cerrado'">
+              <label class="lbl">Notas del mantenimiento</label>
               <textarea v-model="resolutionNotes" class="inp" rows="2" placeholder="Describe cómo se resolvió..." />
             </div>
-            <button v-if="!isPublicAudit && selectedTicket.status !== 'cerrado' && selectedTicket.status !== 'resuelto'" class="btn primary" @click="closeTicket">
-              <i class="fa-solid fa-check" /> Cerrar ticket
+            <button v-if="!isPublicAudit && selectedTicket.status !== 'cerrado'" class="btn primary" @click="closeTicket">
+              <i class="fa-solid fa-check" /> {{ ticketActionLabel(selectedTicket.status) }}
             </button>
             <button v-else-if="isPublicAudit" class="btn primary" @click="requireAccess">
               <i class="fa-solid fa-lock" /> Iniciar sesión para registrar cambios
@@ -500,7 +610,7 @@ onMounted(async () => {
 </template>
 
 <style scoped lang="scss">
-.page { padding: 0 0 60px; display: flex; flex-direction: column; gap: 12px; }
+.page { flex: 1; min-height: 0; padding: 0 0 60px; display: flex; flex-direction: column; gap: 12px; }
 
 .top-bar {
   padding: 10px 12px; background: white; border-bottom: 1px solid rgba($primary-dark, 0.06);
@@ -535,7 +645,7 @@ onMounted(async () => {
   @media (min-width: $bp-mobile) { font-size: 1.2rem; }
 }
 .hero-brand { margin: 2px 0 0; font-size: 0.85rem; color: $text-secondary; }
-.hero-notes { margin: 0; font-size: 0.82rem; color: $text-secondary; line-height: 1.5; padding: 10px; background: #f8fafc; border-radius: 10px; }
+.hero-notes { margin: 0; font-size: 0.82rem; color: $primary-dark; line-height: 1.5; padding: 10px; background: rgba($bg, 0.7); border-radius: 10px; }
 
 .hero-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
 .status-badge {
@@ -543,7 +653,7 @@ onMounted(async () => {
   &.operativo { background: rgba($alert-success, 0.12); color: darken($alert-success, 10%); }
   &.averiado { background: rgba($alert-error, 0.12); color: $alert-error; }
   &.mantenimiento { background: rgba($alert-warning, 0.15); color: darken($alert-warning, 15%); }
-  &.fuera_servicio { background: rgba($text-secondary, 0.12); color: $text-secondary; }
+  &.fuera_servicio { background: rgba($primary-dark, 0.12); color: $primary-dark; }
 }
 .location-badge {
   display: inline-flex; align-items: center; gap: 4px;
@@ -606,6 +716,17 @@ onMounted(async () => {
 }
 .qr-hint { font-size: 0.78rem; color: $text-secondary; }
 .qr-link { max-width: min(100%, 360px); padding: 8px 10px; border-radius: 12px; background: rgba($primary-dark, 0.05); color: $primary; font-size: 0.72rem; font-weight: 800; overflow-wrap: anywhere; text-align: center; text-decoration: none; &:hover { background: rgba($primary, 0.1); } }
+
+.checklist-section { margin: 0 12px; padding: 16px; border-radius: 22px; background: linear-gradient(145deg, white, rgba($bg, 0.78)); border: 1px solid rgba($primary, 0.2); display: flex; flex-direction: column; gap: 14px; box-shadow: 0 18px 42px rgba($primary-dark, 0.07); @media (min-width: $bp-mobile) { margin: 0 16px; padding: 20px; } }
+.section-kicker { display: block; margin-bottom: 3px; color: $primary; font-size: 0.65rem; font-weight: 900; text-transform: uppercase; letter-spacing: 0.8px; }
+.checklist-form { padding: 16px; border-radius: 18px; background: white; border: 1px solid rgba($accent, 0.36); display: flex; flex-direction: column; gap: 10px; p { margin: 0 0 4px; color: $primary-dark; font-size: 0.82rem; line-height: 1.5; } }
+.check-row { position: relative; min-height: 48px; padding: 10px 12px; border-radius: 14px; background: rgba($primary, 0.07); display: flex; align-items: center; gap: 11px; cursor: pointer; color: $primary-dark; input { position: absolute; opacity: 0; pointer-events: none; } strong { font-size: 0.84rem; line-height: 1.35; } }
+.check-box { width: 26px; height: 26px; border-radius: 8px; border: 2px solid rgba($primary, 0.45); display: grid; place-items: center; color: transparent; flex-shrink: 0; background: white; transition: all 0.16s; }
+.check-row:has(input:checked) { background: rgba($accent, 0.16); .check-box { border-color: $accent; background: $accent; color: $primary-dark; } }
+.checklist-history { display: flex; flex-direction: column; gap: 8px; }
+.checklist-record { padding: 13px; border-radius: 16px; background: white; border: 1px solid rgba($primary-dark, 0.07); display: flex; align-items: center; gap: 10px; flex-wrap: wrap; strong { color: $primary-dark; font-size: 0.82rem; } > span:not(.check-result) { color: $primary; font-size: 0.76rem; font-weight: 700; margin-left: auto; } p { flex-basis: 100%; margin: 0; padding-top: 7px; border-top: 1px solid rgba($primary, 0.1); color: $primary-dark; font-size: 0.8rem; } }
+.check-result { display: inline-flex; align-items: center; gap: 6px; padding: 6px 9px; border-radius: 999px; font-size: 0.69rem; font-weight: 900; text-transform: uppercase; &.completo { background: rgba($alert-success, 0.13); color: darken($alert-success, 13%); } &.requiere_atencion { background: rgba($alert-warning, 0.16); color: darken($alert-warning, 18%); } }
+.checklist-empty { min-height: 92px; padding: 16px; border-radius: 16px; background: rgba($primary, 0.07); display: flex; align-items: center; justify-content: center; gap: 10px; color: $primary-dark; font-size: 0.84rem; text-align: center; i { color: $primary; font-size: 1.4rem; } }
 
 .btn {
   display: inline-flex; align-items: center; gap: 8px;

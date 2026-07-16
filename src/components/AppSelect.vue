@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, nextTick, ref } from 'vue'
 
 export interface AppSelectOption {
   value: string
@@ -27,11 +27,30 @@ const emit = defineEmits<{
 }>()
 
 const open = ref(false)
+const openUp = ref(false)
 const customValue = ref('')
+const triggerRef = ref<HTMLElement | null>(null)
+const menuRef = ref<HTMLElement | null>(null)
 
 const selected = computed(() => props.options.find((option) => option.value === props.modelValue))
 const isCustom = computed(() => props.allowCustom && props.modelValue && !selected.value)
 const displayLabel = computed(() => selected.value?.label || props.modelValue || props.placeholder)
+
+async function toggle() {
+  if (open.value) {
+    open.value = false
+    return
+  }
+  open.value = true
+  await nextTick()
+  const trigger = triggerRef.value?.getBoundingClientRect()
+  const menu = menuRef.value
+  if (!trigger || !menu) return
+  const menuHeight = Math.min(menu.scrollHeight, 260) + 12
+  const spaceBelow = window.innerHeight - trigger.bottom
+  const spaceAbove = trigger.top
+  openUp.value = spaceBelow < menuHeight && spaceAbove > spaceBelow
+}
 
 function choose(value: string) {
   emit('update:modelValue', value)
@@ -51,16 +70,16 @@ function updateCustom(value: string) {
 </script>
 
 <template>
-  <div class="app-select" :class="{ open }">
+  <div class="app-select" :class="{ open, 'open-up': openUp }">
     <span v-if="label" class="app-select-label">{{ label }}</span>
-    <button type="button" class="select-trigger" @click="open = !open">
+    <button ref="triggerRef" type="button" class="select-trigger" :aria-expanded="open" @click="toggle">
       <span class="trigger-icon"><i :class="selected?.icon || icon || 'fa-solid fa-chevron-down'" /></span>
       <span class="trigger-text" :class="{ muted: !modelValue }">{{ displayLabel }}</span>
       <i class="fa-solid fa-chevron-down chevron" />
     </button>
 
     <Transition name="select-pop">
-      <div v-if="open" class="select-menu">
+      <div v-if="open" ref="menuRef" class="select-menu">
         <button
           v-for="option in options"
           :key="option.value"
@@ -99,7 +118,7 @@ function updateCustom(value: string) {
 .app-select-label { font-size: 0.8rem; font-weight: 800; color: $text-secondary; }
 .select-trigger {
   width: 100%; min-height: 48px; padding: 8px 12px; display: flex; align-items: center; gap: 10px;
-  border-radius: 14px; border: 1.5px solid rgba($primary-dark, 0.1); background: #f8fafc;
+  border-radius: 14px; border: 1.5px solid rgba($primary-dark, 0.1); background: rgba($bg, 0.64);
   color: $primary-dark; font-family: $font-principal; font-weight: 800; cursor: pointer; text-align: left;
   transition: border-color 0.18s, background 0.18s, box-shadow 0.18s;
   &:hover, .open & { border-color: rgba($primary, 0.5); background: white; box-shadow: 0 10px 26px rgba($primary-dark, 0.06); }
@@ -112,6 +131,7 @@ function updateCustom(value: string) {
   padding: 8px; border-radius: 18px; border: 1px solid rgba($primary-dark, 0.08); background: white;
   box-shadow: 0 22px 52px rgba($primary-dark, 0.16);
 }
+.open-up .select-menu { top: auto; bottom: calc(100% + 8px); }
 .select-option {
   width: 100%; display: flex; align-items: center; gap: 10px; padding: 10px; border: none; border-radius: 13px;
   background: transparent; color: $primary-dark; font-family: $font-principal; text-align: left; cursor: pointer;
@@ -124,10 +144,11 @@ function updateCustom(value: string) {
 }
 .check { color: $accent !important; }
 .custom-input {
-  padding: 12px; border-radius: 12px; border: 1.5px solid rgba($primary-dark, 0.1); background: #f8fafc;
+  padding: 12px; border-radius: 12px; border: 1.5px solid rgba($primary-dark, 0.1); background: rgba($bg, 0.64);
   font-family: $font-principal; font-size: 0.95rem; color: $primary-dark;
   &:focus { outline: none; border-color: $primary; background: white; }
 }
 .select-pop-enter-active, .select-pop-leave-active { transition: opacity 0.16s, transform 0.16s; }
 .select-pop-enter-from, .select-pop-leave-to { opacity: 0; transform: translateY(-6px); }
+.open-up .select-pop-enter-from, .open-up .select-pop-leave-to { transform: translateY(6px); }
 </style>

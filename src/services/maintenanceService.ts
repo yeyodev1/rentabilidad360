@@ -11,6 +11,7 @@ interface EquipmentData {
   imageUrl?: string
   location?: string
   branchId?: string
+  status?: 'operativo' | 'averiado' | 'mantenimiento' | 'fuera_servicio'
 }
 
 interface MaintenanceTicket {
@@ -72,6 +73,14 @@ class MaintenanceService extends APIBase {
 
   async updateTicket(id: string, data: Partial<{ status: string; resolutionNotes: string }>) {
     return this.put(`maintenance/tickets/${id}`, data)
+  }
+
+  async listChecklists(equipmentId: string) {
+    return this.get(`maintenance/equipment/${equipmentId}/checklists`)
+  }
+
+  async createChecklist(equipmentId: string, data: { items: Array<{ key: string; label: string; checked: boolean; notes?: string }>; generalNotes?: string }) {
+    return this.post(`maintenance/equipment/${equipmentId}/checklists`, data)
   }
 }
 

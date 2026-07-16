@@ -7,6 +7,8 @@ import { tiendaService } from '@/services/tiendaService'
 import { workspaceService } from '@/services/workspaceService'
 import { useUserStore } from '@/stores/user'
 import { useUIStore } from '@/stores/ui'
+import AppSelect from '@/components/AppSelect.vue'
+import type { WorkspaceMember } from '@/services/workspaceService'
 
 const userStore = useUserStore()
 const ui = useUIStore()
@@ -15,6 +17,8 @@ const editing = ref(false)
 const loading = ref(true)
 const saving = ref(false)
 const loadError = ref(false)
+const members = ref<WorkspaceMember[]>([])
+const membersLoading = ref(true)
 
 const editForm = ref({
   legalName: '',
@@ -26,10 +30,22 @@ const editForm = ref({
 
 const hasData = computed(() => !!editForm.value?.legalName)
 
-onMounted(() => {
+const countryOptions = [
+  { value: 'Ecuador', label: 'Ecuador', icon: 'fa-solid fa-earth-americas' },
+  { value: 'Colombia', label: 'Colombia', icon: 'fa-solid fa-earth-americas' },
+  { value: 'Perú', label: 'Perú', icon: 'fa-solid fa-earth-americas' },
+  { value: 'México', label: 'México', icon: 'fa-solid fa-earth-americas' },
+]
+
+const roleOptions = [
+  { value: 'supervisor', label: 'Supervisor', icon: 'fa-solid fa-user-shield', hint: 'Crea y edita equipos, reporta y completa checklists' },
+  { value: 'operador', label: 'Operador', icon: 'fa-solid fa-user-gear', hint: 'Consulta equipos, reporta y completa checklists' },
+]
+
+onMounted(async () => {
   userStore.hydrate()
   document.title = 'Workspace · Allio'
-  loadWorkspace()
+  await Promise.all([loadWorkspace(), loadMembers()])
 })
 
 async function loadWorkspace() {
@@ -62,6 +78,90 @@ async function loadWorkspace() {
   }
   clearTimeout(timeout)
   loading.value = false
+}
+
+async function loadMembers() {
+  membersLoading.value = true
+  try {
+    const res = await workspaceService.listMembers()
+    members.value = res.data.members || []
+  } catch {
+    members.value = []
+    ui.showToast({ title: 'No se pudo cargar el equipo', tone: 'error' })
+  } finally {
+    membersLoading.value = false
+  }
+}
+
+const memberDrawerOpen = ref(false)
+const savingMember = ref(false)
+const showMemberPassword = ref(false)
+const memberForm = ref({ name: '', email: '', password: '', role: 'supervisor' as 'supervisor' | 'operador' })
+
+function openMemberDrawer() {
+  memberForm.value = { name: '', email: '', password: '', role: 'supervisor' }
+  showMemberPassword.value = false
+  memberDrawerOpen.value = true
+}
+
+function closeMemberDrawer() {
+  memberDrawerOpen.value = false
+}
+
+async function saveMember() {
+  const form = memberForm.value
+  if (!form.name.trim() || !form.email.trim() || !form.password || !form.role) {
+    ui.showToast({ title: 'Completa nombre, correo, contraseña y rol', tone: 'warning' })
+    return
+  }
+  savingMember.value = true
+  try {
+    await workspaceService.createMember({ ...form, name: form.name.trim(), email: form.email.trim().toLowerCase() })
+    await loadMembers()
+    closeMemberDrawer()
+    ui.showToast({ title: 'Persona agregada al equipo', message: `${form.email} ya puede iniciar sesión.`, tone: 'success', icon: 'fa-solid fa-user-check' })
+  } catch (error: any) {
+    ui.showToast({ title: error?.response?.data?.message || 'No se pudo agregar la persona', tone: 'error' })
+  } finally {
+    savingMember.value = false
+  }
+}
+
+async function changeMemberRole(member: WorkspaceMember, role: string) {
+  if (member.isOwner || member.role === role) return
+  try {
+    await workspaceService.updateMemberRole(member.id, role as 'supervisor' | 'operador')
+    member.role = role as WorkspaceMember['role']
+    ui.showToast({ title: 'Rol actualizado', message: `${member.name} deberá volver a iniciar sesión.`, tone: 'success' })
+  } catch (error: any) {
+    ui.showToast({ title: error?.response?.data?.message || 'No se pudo actualizar el rol', tone: 'error' })
+    await loadMembers()
+  }
+}
+
+async function removeMember(member: WorkspaceMember) {
+  if (member.isOwner) return
+  const ok = await ui.requestConfirm({
+    title: `¿Retirar a ${member.name}?`,
+    message: `${member.email} dejará de tener acceso a este workspace.`,
+    confirmLabel: 'Retirar acceso',
+    cancelLabel: 'Conservar',
+    tone: 'danger',
+    icon: 'fa-solid fa-user-minus',
+  })
+  if (!ok) return
+  try {
+    await workspaceService.removeMember(member.id)
+    await loadMembers()
+    ui.showToast({ title: 'Acceso retirado', tone: 'info' })
+  } catch (error: any) {
+    ui.showToast({ title: error?.response?.data?.message || 'No se pudo retirar el acceso', tone: 'error' })
+  }
+}
+
+function roleLabel(role: string) {
+  if (role === 'admin') return 'Administrador'
+  return roleOptions.find((option) => option.value === role)?.label || role
 }
 
 function startEditing() {
@@ -307,14 +407,17 @@ function statusMeta(s: Tienda['status']) {
         <div>
           <span class="eyebrow"><i class="fa-solid fa-building" /> Workspace</span>
           <h1>Configuración general</h1>
-          <p>Edita los datos de tu empresa, gestiona tus tiendas y elige qué dolores priorizar.</p>
+          <p>Edita tu empresa, administra tiendas y controla quién puede entrar con cada rol.</p>
         </div>
         <div class="head-actions">
           <RouterLink to="/modulos" class="btn ghost">
             <i class="fa-solid fa-arrow-left" /> Volver al panel
           </RouterLink>
-          <button class="btn primary" type="button" @click="openCreate">
-            <i class="fa-solid fa-plus" /> Agregar tienda
+          <button class="btn ghost" type="button" @click="openCreate">
+            <i class="fa-solid fa-store" /> Agregar tienda
+          </button>
+          <button class="btn primary" type="button" @click="openMemberDrawer">
+            <i class="fa-solid fa-user-plus" /> Agregar persona
           </button>
         </div>
       </header>
@@ -337,8 +440,8 @@ function statusMeta(s: Tienda['status']) {
         <article class="stat">
           <span class="stat-icon secondary"><i class="fa-solid fa-users" /></span>
           <div>
-            <span>Personal estimado</span>
-            <strong>{{ totals.staff }}</strong>
+            <span>Usuarios con acceso</span>
+            <strong>{{ members.length }}</strong>
           </div>
         </article>
         <article class="stat">
@@ -415,13 +518,7 @@ function statusMeta(s: Tienda['status']) {
                 </div>
                 <div class="field">
                   <label class="lbl">País</label>
-                  <select v-model="editForm.country" class="inp">
-                    <option value="">Seleccionar</option>
-                    <option value="Ecuador">Ecuador</option>
-                    <option value="Colombia">Colombia</option>
-                    <option value="Perú">Perú</option>
-                    <option value="México">México</option>
-                  </select>
+                  <AppSelect v-model="editForm.country" :options="countryOptions" placeholder="Seleccionar país" icon="fa-solid fa-earth-americas" />
                 </div>
               </div>
               <div class="field">
@@ -547,6 +644,59 @@ function statusMeta(s: Tienda['status']) {
           </button>
         </article>
       </section>
+
+      <section class="team-card">
+        <header class="card-head team-head">
+          <div>
+            <span class="team-kicker">Accesos del negocio</span>
+            <h2><i class="fa-solid fa-people-group" /> Equipo y roles</h2>
+            <p>Cada persona inicia sesión con su propio correo. Define qué puede hacer desde su rol.</p>
+          </div>
+          <button class="btn primary" type="button" @click="openMemberDrawer">
+            <i class="fa-solid fa-user-plus" /> Agregar persona
+          </button>
+        </header>
+
+        <div class="role-guide">
+          <span><i class="fa-solid fa-crown" /><strong>Administrador</strong> controla empresa, tiendas y accesos.</span>
+          <span><i class="fa-solid fa-user-shield" /><strong>Supervisor</strong> crea y edita equipos.</span>
+          <span><i class="fa-solid fa-user-gear" /><strong>Operador</strong> reporta y llena checklists.</span>
+        </div>
+
+        <div v-if="membersLoading" class="ws-loading"><div class="ws-spinner" /><span>Cargando equipo…</span></div>
+        <div v-else-if="!members.length" class="team-empty">
+          <i class="fa-solid fa-user-plus" />
+          <strong>Aún no hay personas registradas</strong>
+          <button class="btn primary sm" type="button" @click="openMemberDrawer">Agregar la primera</button>
+        </div>
+        <div v-else class="member-list">
+          <article v-for="member in members" :key="member.id" class="member-row">
+            <span class="member-avatar">{{ member.name.split(/\s+/).map((part) => part[0]).join('').slice(0, 2).toUpperCase() }}</span>
+            <div class="member-info">
+              <div class="member-name">
+                <strong>{{ member.name }}</strong>
+                <span v-if="member.isOwner" class="owner-badge"><i class="fa-solid fa-crown" /> Propietario</span>
+              </div>
+              <a :href="`mailto:${member.email}`"><i class="fa-solid fa-envelope" /> {{ member.email }}</a>
+            </div>
+            <div class="member-role">
+              <span class="member-role-label">Rol</span>
+              <span v-if="member.isOwner" class="admin-role"><i class="fa-solid fa-shield-halved" /> {{ roleLabel(member.role) }}</span>
+              <AppSelect
+                v-else
+                :model-value="member.role"
+                :options="roleOptions"
+                placeholder="Seleccionar rol"
+                icon="fa-solid fa-user-shield"
+                @update:model-value="changeMemberRole(member, $event)"
+              />
+            </div>
+            <button v-if="!member.isOwner" class="member-remove" type="button" title="Retirar acceso" @click="removeMember(member)">
+              <i class="fa-solid fa-user-minus" />
+            </button>
+          </article>
+        </div>
+      </section>
     </div>
 
     </AppShell>
@@ -653,6 +803,57 @@ function statusMeta(s: Tienda['status']) {
           </aside>
         </div>
       </Transition>
+
+      <Transition name="drawer">
+        <div v-if="memberDrawerOpen" class="drawer-backdrop" @click.self="closeMemberDrawer">
+          <aside class="drawer member-drawer" role="dialog" aria-modal="true">
+            <header class="drawer-head member-drawer-head">
+              <span class="drawer-eyebrow">Nuevo acceso</span>
+              <h2>Agregar persona al equipo</h2>
+              <p>Crearemos una cuenta individual para este workspace.</p>
+              <button class="drawer-close" type="button" @click="closeMemberDrawer" aria-label="Cerrar"><i class="fa-solid fa-xmark" /></button>
+            </header>
+            <section class="drawer-body">
+              <div class="member-callout">
+                <i class="fa-solid fa-envelope-circle-check" />
+                <div><strong>Un correo por persona</strong><span>Este será su usuario para iniciar sesión en Allio.</span></div>
+              </div>
+              <div class="field">
+                <label class="lbl"><i class="fa-solid fa-user" /> Nombre completo</label>
+                <input v-model="memberForm.name" type="text" class="inp" placeholder="Ej: Jonathan Pareja" autocomplete="off" />
+              </div>
+              <div class="field">
+                <label class="lbl"><i class="fa-solid fa-envelope" /> Correo electrónico</label>
+                <input v-model="memberForm.email" type="email" class="inp" placeholder="persona@restaurante.com" autocomplete="off" />
+              </div>
+              <div class="field">
+                <label class="lbl"><i class="fa-solid fa-key" /> Contraseña inicial</label>
+                <div class="password-field">
+                  <input v-model="memberForm.password" :type="showMemberPassword ? 'text' : 'password'" class="inp" placeholder="Mínimo 6 caracteres" autocomplete="new-password" />
+                  <button type="button" @click="showMemberPassword = !showMemberPassword" :aria-label="showMemberPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'">
+                    <i :class="showMemberPassword ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye'" />
+                  </button>
+                </div>
+              </div>
+              <div class="field">
+                <label class="lbl"><i class="fa-solid fa-user-shield" /> Rol y permisos</label>
+                <AppSelect v-model="memberForm.role" :options="roleOptions" placeholder="Seleccionar rol" icon="fa-solid fa-user-shield" required />
+              </div>
+              <div class="selected-role-note">
+                <i :class="memberForm.role === 'supervisor' ? 'fa-solid fa-user-shield' : 'fa-solid fa-user-gear'" />
+                <span>{{ roleOptions.find((option) => option.value === memberForm.role)?.hint }}</span>
+              </div>
+            </section>
+            <footer class="drawer-foot">
+              <button class="btn ghost" type="button" @click="closeMemberDrawer">Cancelar</button>
+              <button class="btn primary" type="button" :disabled="savingMember" @click="saveMember">
+                <i :class="savingMember ? 'fa-solid fa-spinner fa-spin' : 'fa-solid fa-user-plus'" />
+                {{ savingMember ? 'Creando acceso…' : 'Crear acceso' }}
+              </button>
+            </footer>
+          </aside>
+        </div>
+      </Transition>
     </Teleport>
   </div>
 </template>
@@ -729,13 +930,28 @@ function statusMeta(s: Tienda['status']) {
   @media (min-width: 1024px) { grid-template-columns: 0.85fr 1.15fr; }
 }
 
-.ws-card, .tiendas-card {
+.ws-card, .tiendas-card, .team-card {
   background: white;
   border: 1px solid rgba($primary-dark, 0.05);
   border-radius: 22px;
   padding: 22px;
   display: flex; flex-direction: column; gap: 18px;
 }
+.team-card { background: linear-gradient(145deg, white, rgba($bg, 0.68)); border-color: rgba($primary, 0.18); }
+.team-head { align-items: center; }
+.team-kicker { display: block; margin-bottom: 5px; color: $primary; font-size: 0.64rem; font-weight: 900; letter-spacing: 0.9px; text-transform: uppercase; }
+.role-guide { display: flex; gap: 10px; flex-wrap: wrap; span { flex: 1 1 220px; min-height: 46px; padding: 10px 12px; border-radius: 14px; background: rgba($primary, 0.07); color: $primary-dark; display: flex; align-items: center; gap: 7px; font-size: 0.76rem; line-height: 1.35; i { color: $primary; } strong { white-space: nowrap; } } }
+.member-list { display: flex; flex-direction: column; gap: 10px; }
+.member-row { position: relative; padding: 14px; border-radius: 17px; border: 1px solid rgba($primary-dark, 0.08); background: white; display: grid; grid-template-columns: 48px minmax(180px, 1fr) minmax(250px, 330px) 40px; align-items: center; gap: 12px; @media (max-width: 760px) { grid-template-columns: 44px 1fr 40px; .member-role { grid-column: 1 / -1; } } }
+.member-avatar { width: 48px; height: 48px; border-radius: 16px; display: grid; place-items: center; background: linear-gradient(135deg, $primary-dark, $primary); color: white; font-size: 0.82rem; font-weight: 900; }
+.member-info { min-width: 0; display: flex; flex-direction: column; gap: 5px; a { width: fit-content; max-width: 100%; color: $primary; font-size: 0.78rem; font-weight: 750; text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; i { margin-right: 4px; } } }
+.member-name { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; strong { color: $primary-dark; font-size: 0.92rem; font-weight: 900; } }
+.owner-badge { padding: 4px 7px; border-radius: 999px; background: rgba($accent, 0.2); color: $primary-dark; font-size: 0.62rem; font-weight: 900; text-transform: uppercase; i { color: darken($accent, 15%); } }
+.member-role { min-width: 0; display: flex; flex-direction: column; gap: 5px; }
+.member-role-label { color: $primary; font-size: 0.62rem; font-weight: 900; text-transform: uppercase; letter-spacing: 0.6px; }
+.admin-role { min-height: 48px; padding: 10px 13px; border-radius: 14px; background: rgba($primary-dark, 0.08); color: $primary-dark; display: flex; align-items: center; gap: 8px; font-size: 0.82rem; font-weight: 850; i { color: $primary; } }
+.member-remove { width: 40px; height: 40px; border: none; border-radius: 13px; background: rgba($alert-error, 0.08); color: $alert-error; cursor: pointer; &:hover { background: rgba($alert-error, 0.16); } }
+.team-empty { min-height: 140px; padding: 24px; border-radius: 18px; background: rgba($primary, 0.07); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; color: $primary-dark; i { color: $primary; font-size: 1.8rem; } }
 .card-head {
   display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;
   h2 { margin: 0; font-size: 1rem; font-weight: 800; color: $primary-dark; display: inline-flex; align-items: center; gap: 8px;
@@ -984,6 +1200,10 @@ function statusMeta(s: Tienda['status']) {
   position: relative;
   h2 { margin: 6px 0 0; font-size: 1.2rem; font-weight: 800; color: $primary-dark; }
 }
+.member-drawer-head p { margin: 6px 48px 0 0; color: $primary-dark; font-size: 0.8rem; line-height: 1.4; }
+.member-callout { padding: 14px; border-radius: 16px; background: rgba($accent, 0.17); color: $primary-dark; display: flex; align-items: center; gap: 12px; > i { width: 42px; height: 42px; border-radius: 13px; display: grid; place-items: center; background: $accent; font-size: 1.1rem; } div { display: flex; flex-direction: column; gap: 3px; } strong { font-size: 0.86rem; } span { font-size: 0.76rem; line-height: 1.4; } }
+.password-field { position: relative; display: flex; .inp { padding-right: 50px; } button { position: absolute; right: 6px; top: 6px; width: 38px; height: 38px; border: none; border-radius: 10px; background: rgba($primary, 0.09); color: $primary; cursor: pointer; } }
+.selected-role-note { padding: 12px; border-radius: 14px; background: rgba($primary, 0.08); color: $primary-dark; display: flex; align-items: center; gap: 10px; font-size: 0.78rem; line-height: 1.45; i { color: $primary; font-size: 1rem; } }
 .drawer-eyebrow {
   display: inline-block;
   font-size: 0.62rem; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: $primary;

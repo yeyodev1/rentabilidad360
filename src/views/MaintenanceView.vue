@@ -81,7 +81,7 @@ function statusClass(s: string): string {
   if (s === 'operativo') return 'green'
   if (s === 'averiado') return 'red'
   if (s === 'mantenimiento') return 'yellow'
-  return 'gray'
+  return 'violet'
 }
 
 function statusLabel(s: string): string {
@@ -210,11 +210,11 @@ function printSticker() {
       * { margin: 0; padding: 0; box-sizing: border-box; }
       body { display: flex; justify-content: center; align-items: center; min-height: 100vh; font-family: Arial, sans-serif; }
       .sticker { text-align: center; padding: 24px; max-width: 300px; }
-      .sticker h2 { font-size: 14px; color: #333; margin-bottom: 12px; }
-      .sticker .loc { font-size: 11px; color: #666; margin-bottom: 6px; }
+      .sticker h2 { font-size: 14px; color: #2F243A; margin-bottom: 12px; }
+      .sticker .loc { font-size: 11px; color: #588B8B; margin-bottom: 6px; }
       .sticker img { width: 200px; height: 200px; display: block; margin: 0 auto 8px; }
-      .sticker p { font-size: 11px; color: #666; }
-      .sticker .url { font-size: 8px; color: #888; overflow-wrap: anywhere; margin-top: 6px; }
+      .sticker p { font-size: 11px; color: #2F243A; }
+      .sticker .url { font-size: 8px; color: #588B8B; overflow-wrap: anywhere; margin-top: 6px; }
       @media print {
         @page { margin: 6mm; size: 57mm 57mm; }
         body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
@@ -311,16 +311,16 @@ onMounted(async () => {
     <div class="page">
       <header class="page-head">
         <div>
-          <span class="eyebrow"><i class="fa-solid fa-qrcode" /> QR · historial · tickets</span>
-          <h1 class="page-title">Mantenimiento inteligente</h1>
-          <p class="page-sub">Registra equipos, pega su QR y consulta el historial técnico desde cualquier celular.</p>
+          <span class="eyebrow"><i class="fa-solid fa-user-shield" /> {{ userStore.isSupervisor ? 'Panel de Supervisor' : 'QR · historial · tickets' }}</span>
+          <h1 class="page-title">{{ userStore.isSupervisor ? 'Control de equipos de cocina' : 'Mantenimiento inteligente' }}</h1>
+          <p class="page-sub">{{ userStore.isSupervisor ? 'Agrega o modifica equipos, reporta mantenimientos y completa sus checklists desde la ficha.' : 'Registra equipos, pega su QR y consulta el historial técnico desde cualquier celular.' }}</p>
           <div class="hero-pills">
             <span :class="['hero-status', equipStatus]"><i class="fa-solid fa-heart-pulse" /> {{ healthLabel }}</span>
             <span><i class="fa-solid fa-mobile-screen" /> Escaneo con cámara nativa</span>
             <span><i class="fa-solid fa-store" /> {{ selectedBranchLabel }}</span>
           </div>
         </div>
-        <button class="btn primary" @click="openNewForm">
+        <button v-if="userStore.canManageEquipment" class="btn primary" @click="openNewForm">
           <i class="fa-solid fa-plus" /> <span class="btn-text">Nuevo Equipo</span>
         </button>
         <div class="hero-device" aria-hidden="true">
@@ -415,7 +415,7 @@ onMounted(async () => {
         <i class="fa-solid fa-screwdriver-wrench empty-icon" />
         <h3>Sin equipos registrados</h3>
         <p>Registra tu primer equipo para comenzar el control de mantenimiento.</p>
-        <button class="btn primary" @click="openNewForm"><i class="fa-solid fa-plus" /> Registrar Equipo</button>
+        <button v-if="userStore.canManageEquipment" class="btn primary" @click="openNewForm"><i class="fa-solid fa-plus" /> Registrar Equipo</button>
       </section>
 
       <section v-else class="eq-grid">
@@ -431,10 +431,10 @@ onMounted(async () => {
               <span class="eq-brand">{{ eq.brand || 'Equipo sin marca' }}</span>
             </div>
             <div class="eq-actions" @click.stop>
-              <button class="action-btn" @click="openEdit(eq)" title="Editar">
+              <button v-if="userStore.canManageEquipment" class="action-btn" @click="openEdit(eq)" title="Editar">
                 <i class="fa-solid fa-pen-to-square" />
               </button>
-              <button class="action-btn danger" @click="handleDelete(eq._id)" :disabled="deletingId === eq._id" title="Eliminar">
+              <button v-if="userStore.canDeleteEquipment" class="action-btn danger" @click="handleDelete(eq._id)" :disabled="deletingId === eq._id" title="Eliminar">
                 <i class="fa-solid fa-trash-can" />
               </button>
             </div>
@@ -499,7 +499,7 @@ onMounted(async () => {
 </template>
 
 <style scoped lang="scss">
-.page { padding: 0 0 88px; display: flex; flex-direction: column; gap: 16px; }
+.page { flex: 1; min-height: 0; padding: 0 0 88px; display: flex; flex-direction: column; gap: 16px; }
 
 .page-head {
   position: relative;
@@ -572,9 +572,9 @@ onMounted(async () => {
 
 .empty-state { margin: 0 16px; padding: 58px 20px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 12px; border-radius: 28px; background: radial-gradient(circle at 50% 0%, rgba($primary, 0.12), transparent 42%), white; border: 1px solid rgba($primary-dark, 0.06); box-shadow: 0 22px 50px rgba($primary-dark, 0.055); .empty-icon { font-size: 2.8rem; color: rgba($primary, 0.36); } h3 { margin: 0; font-size: 1.22rem; font-weight: 900; color: $primary-dark; } p { margin: 0; font-size: 0.9rem; color: $text-secondary; max-width: 330px; line-height: 1.5; } }
 
-.eq-grid { padding: 0 16px; display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; }
+.eq-grid { flex: 1; align-content: start; padding: 0 16px; display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; }
 .eq-card { position: relative; overflow: hidden; background: rgba(white, 0.95); border-radius: 24px; padding: 16px; border: 1px solid rgba($primary-dark, 0.06); cursor: pointer; display: flex; flex-direction: column; gap: 14px; box-shadow: 0 18px 44px rgba($primary-dark, 0.055); transition: transform 0.18s, box-shadow 0.18s, border-color 0.18s; &:hover { transform: translateY(-3px); border-color: rgba($primary, 0.24); box-shadow: 0 24px 54px rgba($primary-dark, 0.08); } }
-.eq-glow { position: absolute; inset: 0 0 auto; height: 5px; background: $text-secondary; &.green { background: $alert-success; } &.red { background: $alert-error; } &.yellow { background: $alert-warning; } }
+.eq-glow { position: absolute; inset: 0 0 auto; height: 5px; background: $primary-dark; &.green { background: $alert-success; } &.red { background: $alert-error; } &.yellow { background: $alert-warning; } &.violet { background: $primary-dark; } }
 .eq-card-top { display: flex; align-items: center; gap: 12px; padding-top: 4px; }
 .eq-icon { width: 54px; height: 54px; border-radius: 18px; background: linear-gradient(135deg, rgba($primary, 0.16), rgba($primary, 0.06)); color: $primary; display: flex; align-items: center; justify-content: center; font-size: 1.28rem; flex-shrink: 0; }
 .eq-thumb { width: 54px; height: 54px; border-radius: 18px; object-fit: cover; flex-shrink: 0; border: 1px solid rgba($primary-dark, 0.08); }
@@ -586,7 +586,7 @@ onMounted(async () => {
 
 .eq-card-body { display: flex; flex-direction: column; gap: 10px; }
 .eq-meta-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.eq-status { font-size: 0.66rem; font-weight: 900; padding: 5px 10px; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.35px; &.green { background: rgba($alert-success, 0.11); color: darken($alert-success, 14%); } &.red { background: rgba($alert-error, 0.1); color: $alert-error; } &.yellow { background: rgba($alert-warning, 0.13); color: darken($alert-warning, 16%); } &.gray { background: rgba($text-secondary, 0.1); color: $text-secondary; } }
+.eq-status { font-size: 0.66rem; font-weight: 900; padding: 5px 10px; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.35px; &.green { background: rgba($alert-success, 0.11); color: darken($alert-success, 14%); } &.red { background: rgba($alert-error, 0.1); color: $alert-error; } &.yellow { background: rgba($alert-warning, 0.13); color: darken($alert-warning, 16%); } &.violet { background: rgba($primary-dark, 0.1); color: $primary-dark; } }
 .eq-value { margin-left: auto; font-size: 0.9rem; font-weight: 900; color: $primary-dark; }
 .eq-location { font-size: 0.76rem; color: $text-secondary; display: flex; align-items: center; gap: 4px; font-weight: 700; i { font-size: 0.68rem; } }
 .eq-branch { font-size: 0.76rem; color: $primary; display: flex; align-items: center; gap: 4px; font-weight: 850; padding: 5px 9px; border-radius: 999px; background: rgba($primary, 0.08); i { font-size: 0.68rem; } }

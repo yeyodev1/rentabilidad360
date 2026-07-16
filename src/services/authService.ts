@@ -1,5 +1,7 @@
 import APIBase from './httpBase'
 
+export type UserRole = 'admin' | 'supervisor' | 'operador'
+
 interface RegisterPayload {
   firstName: string
   lastName: string
@@ -25,7 +27,7 @@ interface VerifyResponse {
     name: string
     email: string
     workspaceIds: string[]
-    role?: string
+    role?: UserRole
   }
   hasWorkspace?: boolean
   workspaceCount?: number
@@ -39,7 +41,7 @@ interface LoginResponse {
     name: string
     email: string
     workspaceIds: string[]
-    role?: string
+    role?: UserRole
   }
   hasWorkspace?: boolean
   workspaceCount?: number

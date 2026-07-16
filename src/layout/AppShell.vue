@@ -27,6 +27,7 @@ function onDocClick(e: MouseEvent) {
 }
 
 function goWorkspace() {
+  if (!userStore.canManageWorkspace) return
   tiendaMenuOpen.value = false
   router.push('/configuracion/workspace')
 }
@@ -68,7 +69,9 @@ interface NavItem {
   ribbon?: string
 }
 
-const nav = computed<NavItem[]>(() => [
+const nav = computed<NavItem[]>(() => userStore.isOperational ? [
+  { to: '/modulo/mantenimiento', matches: ['/modulo/mantenimiento'], icon: 'fa-solid fa-screwdriver-wrench', label: 'Mantenimiento', kind: 'mantenimiento', hint: 'Equipos · reportes · checklist' },
+] : [
   userStore.hasWorkspace
     ? {
         to: '/dashboard',
@@ -145,13 +148,13 @@ function upgrade() {
 
         <div class="workspace">
           <span class="section-label">Workspace</span>
-          <button type="button" class="workspace-card" @click="goWorkspace" title="Configurar workspace">
+          <button type="button" class="workspace-card" @click="goWorkspace" :title="userStore.canManageWorkspace ? 'Configurar workspace' : 'Workspace asignado'">
             <span class="ws-avatar">{{ initials }}</span>
             <div class="ws-meta">
               <strong>{{ userStore.workspaceName || 'Mi restaurante' }}</strong>
               <span>{{ userStore.workspaceBranchCount }} {{ userStore.workspaceBranchCount === 1 ? 'sucursal' : 'sucursales' }}</span>
             </div>
-            <i class="fa-solid fa-gear ws-gear" />
+            <i v-if="userStore.canManageWorkspace" class="fa-solid fa-gear ws-gear" />
           </button>
 
           <!-- Tienda switcher -->
@@ -176,8 +179,8 @@ function upgrade() {
                     </span>
                     <i v-if="userStore.mainBranch?.id === b.id" class="fa-solid fa-circle-check ok" />
                   </button>
-                  <div class="drop-divider" />
-                  <button type="button" class="drop-action" @click="goWorkspace">
+                  <div v-if="userStore.canManageWorkspace" class="drop-divider" />
+                  <button v-if="userStore.canManageWorkspace" type="button" class="drop-action" @click="goWorkspace">
                     <i class="fa-solid fa-gear" /> Gestionar sucursales
                   </button>
                 </div>
@@ -217,7 +220,7 @@ function upgrade() {
         </nav>
 
         <!-- Upgrade card -->
-        <div class="upgrade-card">
+        <div v-if="!userStore.isOperational" class="upgrade-card">
           <span class="upgrade-eyebrow"><i class="fa-solid fa-crown" /> Premium</span>
           <h4>Desbloquea todo</h4>
           <p>Reportes ilimitados, alertas y más.</p>
@@ -227,7 +230,7 @@ function upgrade() {
         </div>
 
         <div class="sidebar-foot">
-          <button class="foot-btn" @click="connectData">
+          <button v-if="!userStore.isOperational" class="foot-btn" @click="connectData">
             <i class="fa-solid fa-plug-circle-bolt" /> Conectar datos
           </button>
           <button class="foot-btn danger" @click="logout">
@@ -256,7 +259,7 @@ function upgrade() {
             <i :class="activeNav?.icon || 'fa-solid fa-grid-2'" />
             {{ activeNav?.label || 'Panel' }}
           </span>
-          <span class="ea-badge" title="Algunos módulos están en desarrollo y pueden no estar completamente funcionales.">
+            <span v-if="!userStore.isOperational" class="ea-badge" title="Algunos módulos están en desarrollo y pueden no estar completamente funcionales.">
             <i class="fa-solid fa-flask" /> Acceso Anticipado
           </span>
           <span v-if="userStore.mainBranch" class="crumb-tienda">
@@ -265,7 +268,8 @@ function upgrade() {
         </div>
 
         <div class="top-actions">
-          <button class="icon-btn" title="Notificaciones" @click="ui.showToast({ title: '3 alertas activas', message: 'Revisa el detalle en cada módulo.', tone: 'warning' })">
+          <span v-if="userStore.isOperational" class="role-badge"><i class="fa-solid fa-user-shield" /> {{ userStore.isSupervisor ? 'Supervisor' : 'Operador' }}</span>
+          <button v-if="!userStore.isOperational" class="icon-btn" title="Notificaciones" @click="ui.showToast({ title: '3 alertas activas', message: 'Revisa el detalle en cada módulo.', tone: 'warning' })">
             <i class="fa-solid fa-bell" />
             <span class="dot" />
           </button>
@@ -287,7 +291,7 @@ function upgrade() {
                   <button class="menu-item" type="button" @click="acModalOpen = true; userMenuOpen = false">
                     <i class="fa-solid fa-user-pen" /> Editar perfil
                   </button>
-                  <button class="menu-item" type="button" @click="userMenuOpen = false; goWorkspace()">
+                  <button v-if="userStore.canManageWorkspace" class="menu-item" type="button" @click="userMenuOpen = false; goWorkspace()">
                     <i class="fa-solid fa-building" /> Configurar workspace
                   </button>
                 </div>
@@ -1015,7 +1019,12 @@ function upgrade() {
 .page {
   flex: 1;
   min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
+
+.role-badge { display: inline-flex; align-items: center; gap: 6px; padding: 7px 10px; border-radius: 999px; background: rgba($accent, 0.2); color: $primary-dark; font-size: 0.72rem; font-weight: 850; white-space: nowrap; }
 
 /* ═══ BOTTOM NAV (mobile) ═══ */
 .bottom-nav {

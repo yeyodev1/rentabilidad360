@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { useRouter, RouterLink } from 'vue-router'
+import { useRouter, useRoute, RouterLink } from 'vue-router'
 import { authService } from '@/services/authService'
 import { useUserStore } from '@/stores/user'
 
 const router = useRouter()
+const route = useRoute()
 const userStore = useUserStore()
 
 const email = ref('')
@@ -27,7 +28,8 @@ async function handleLogin() {
       localStorage.setItem('user_role', res.data.user.role)
     }
     userStore.setUser(res.data.user)
-    router.replace(res.data.hasWorkspace ? '/modulos' : '/onboarding')
+    const next = typeof route.query.next === 'string' ? route.query.next : ''
+    router.replace(next || (res.data.user.role !== 'admin' ? '/modulo/mantenimiento' : res.data.hasWorkspace ? '/modulos' : '/onboarding'))
   } catch (e: any) {
     if (e?.response?.data?.needsVerification) {
       router.replace(`/verify?email=${encodeURIComponent(e.response.data.email)}`)

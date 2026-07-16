@@ -33,7 +33,7 @@ const routes: Array<RouteRecordRaw> = [
     path: '/dashboard',
     name: 'Dashboard',
     component: () => import('../views/InicioView.vue'),
-    meta: { title: 'Inicio · Allio' },
+    meta: { title: 'Inicio · Allio', requiresAuth: true },
   },
   {
     path: '/modulos',
@@ -43,25 +43,25 @@ const routes: Array<RouteRecordRaw> = [
     path: '/configuracion/workspace',
     name: 'Workspace',
     component: () => import('../views/WorkspaceView.vue'),
-    meta: { title: 'Workspace · Allio' },
+    meta: { title: 'Workspace · Allio', requiresAuth: true, adminOnly: true },
   },
   {
     path: '/modulo/mantenimiento',
     name: 'ModuleMaintenance',
     component: () => import('../views/MaintenanceView.vue'),
-    meta: { title: 'Mantenimiento Pro · Allio' },
+    meta: { title: 'Mantenimiento Pro · Allio', requiresAuth: true },
   },
   {
     path: '/modulo/costeo',
     name: 'ModuleCosting',
     component: () => import('../views/CostingView.vue'),
-    meta: { title: 'Costeo de Recetas · Allio' },
+    meta: { title: 'Costeo de Recetas · Allio', requiresAuth: true, adminOnly: true },
   },
   {
     path: '/onboarding',
     name: 'Onboarding',
     component: () => import('../views/OnboardingFlow/index.vue'),
-    meta: { title: 'Configuración · Allio' },
+    meta: { title: 'Configuración · Allio', requiresAuth: true, adminOnly: true },
   },
   {
     path: '/modulo/mantenimiento/:id',
@@ -93,6 +93,10 @@ router.beforeEach((to, _from, next) => {
       next({ name: 'Login', query: { next: to.fullPath } })
       return
     }
+  }
+  if (to.meta?.adminOnly && localStorage.getItem('user_role') !== 'admin') {
+    next('/modulo/mantenimiento')
+    return
   }
   next()
 })

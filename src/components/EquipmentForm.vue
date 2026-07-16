@@ -24,6 +24,13 @@ const locationOptions = [
   'Cava', 'Cuarto frío', 'Zona de lavado', 'Oficina'
 ].map((label) => ({ value: label, label, icon: 'fa-solid fa-location-dot' }))
 
+const statusOptions = [
+  { value: 'operativo', label: 'Operativo', icon: 'fa-solid fa-circle-check' },
+  { value: 'mantenimiento', label: 'En mantenimiento', icon: 'fa-solid fa-screwdriver-wrench' },
+  { value: 'averiado', label: 'Averiado', icon: 'fa-solid fa-triangle-exclamation' },
+  { value: 'fuera_servicio', label: 'Fuera de servicio', icon: 'fa-solid fa-ban' },
+]
+
 const form = ref({
   name: props.equipment?.name || '',
   brand: props.equipment?.brand || '',
@@ -35,6 +42,7 @@ const form = ref({
   imageUrl: props.equipment?.imageUrl || '',
   location: props.equipment?.location || '',
   branchId: props.equipment?.branchId || props.initialBranchId || props.branches.find((branch) => branch.isMain)?.id || props.branches[0]?.id || '',
+  status: props.equipment?.status || 'operativo',
 })
 
 const loading = ref(false)
@@ -199,6 +207,11 @@ onBeforeUnmount(revokeObjectUrl)
           <AppSelect v-model="form.location" :options="locationOptions" placeholder="Seleccionar ubicación" icon="fa-solid fa-location-dot" allow-custom custom-placeholder="Ej: Entrada principal" />
         </label>
 
+        <label v-if="isEditing" class="field">
+          <span class="field-label">Estado actual del equipo</span>
+          <AppSelect v-model="form.status" :options="statusOptions" placeholder="Seleccionar estado" icon="fa-solid fa-gauge-high" required />
+        </label>
+
         <label class="field">
           <span class="field-label">
             Foto del Equipo
@@ -275,6 +288,7 @@ onBeforeUnmount(revokeObjectUrl)
   background: white; border-radius: 22px;
   padding: 24px; display: flex; flex-direction: column; gap: 20px;
   box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+  max-height: calc(100dvh - 48px); overflow-y: auto;
 }
 .modal-head { display: flex; justify-content: space-between; align-items: center; }
 .modal-title { margin: 0; font-size: 1.2rem; font-weight: 800; color: $primary-dark; display: flex; align-items: center; gap: 8px; i { color: $primary; } }
@@ -307,7 +321,7 @@ onBeforeUnmount(revokeObjectUrl)
     transform: translateX(-50%) translateY(4px);
     visibility: hidden; opacity: 0;
     transition: all 0.2s ease;
-    background: #1e293b; color: white;
+    background: $primary-dark; color: white;
     padding: 8px 12px; border-radius: 8px;
     font-size: 0.75rem; font-weight: 500; line-height: 1.4;
     white-space: normal; width: 220px; text-align: left;
@@ -318,7 +332,7 @@ onBeforeUnmount(revokeObjectUrl)
 
 .field input, .field textarea {
   padding: 12px; border-radius: 12px; border: 1.5px solid rgba($primary-dark, 0.1);
-  background: #f8fafc; font-family: $font-principal; font-size: 0.95rem; color: $primary-dark;
+  background: rgba($bg, 0.64); font-family: $font-principal; font-size: 0.95rem; color: $primary-dark;
   &:focus { outline: none; border-color: $primary; background: white; }
 }
 
@@ -326,7 +340,7 @@ onBeforeUnmount(revokeObjectUrl)
 .upload-btn {
   display: flex; align-items: center; gap: 6px;
   padding: 10px 16px; border-radius: 12px;
-  background: #f0f4f8; cursor: pointer; font-size: 0.85rem; font-weight: 600;
+  background: rgba($primary, 0.08); cursor: pointer; font-size: 0.85rem; font-weight: 600;
   border: 2px dashed rgba($primary-dark, 0.15);
   color: $text-secondary; transition: all 0.2s; flex: 0 1 auto;
   i { color: $primary; font-size: 1rem; }
@@ -383,12 +397,12 @@ onBeforeUnmount(revokeObjectUrl)
 .location-row { display: flex; gap: 8px; }
 .location-select {
   flex: 1; padding: 12px; border-radius: 12px; border: 1.5px solid rgba($primary-dark, 0.1);
-  background: #f8fafc; font-family: $font-principal; font-size: 0.95rem; color: $primary-dark;
+  background: rgba($bg, 0.64); font-family: $font-principal; font-size: 0.95rem; color: $primary-dark;
   &:focus { outline: none; border-color: $primary; background: white; }
 }
 .location-input {
   flex: 1; padding: 12px; border-radius: 12px; border: 1.5px solid rgba($primary-dark, 0.1);
-  background: #f8fafc; font-family: $font-principal; font-size: 0.95rem; color: $primary-dark;
+  background: rgba($bg, 0.64); font-family: $font-principal; font-size: 0.95rem; color: $primary-dark;
   &:focus { outline: none; border-color: $primary; background: white; }
 }
 
