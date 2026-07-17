@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import AppShell from '@/layout/AppShell.vue'
 import { useUIStore } from '@/stores/ui'
 import { useUserStore } from '@/stores/user'
@@ -39,6 +39,7 @@ const plants = ref<SupervisionPlant[]>([])
 const templates = ref<SupervisionTemplate[]>([])
 const submissions = ref<SupervisionSubmission[]>([])
 const openSections = ref<string[]>([])
+const checklistElement = ref<HTMLElement | null>(null)
 const photos = ref<PhotoDraft[]>([])
 const answers = reactive<Record<string, AnswerDraft>>({})
 const plantDraft = reactive({ name: '', address: '' })
@@ -106,9 +107,11 @@ function initializeTemplate(template: SupervisionTemplate | null) {
   })
 }
 
-function chooseTemplate(id: string) {
+async function chooseTemplate(id: string) {
   templateId.value = id
   initializeTemplate(selectedTemplate.value)
+  await nextTick()
+  checklistElement.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
 
 function setStatus(itemKey: string, status: SupervisionAnswerStatus) {
@@ -374,7 +377,7 @@ onBeforeUnmount(clearPhotos)
           </div>
 
           <div v-if="!availableTemplates.length" class="empty-state">No hay plantillas disponibles para {{ targetType === 'branch' ? 'locales' : 'plantas' }}.</div>
-          <div v-else class="template-list">
+          <div v-else class="template-list" aria-label="Formatos disponibles">
             <button v-for="template in availableTemplates" :key="template._id" type="button" class="template-card" :class="{ active: templateId === template._id }" @click="chooseTemplate(template._id)">
               <span class="template-icon"><i :class="template.targetType === 'branch' ? 'fa-solid fa-store' : 'fa-solid fa-industry'" /></span>
               <span class="template-copy"><strong>{{ template.name }}</strong><small>{{ template.description }}</small><em>{{ frequencyLabel(template.frequency) }}<span v-if="template.recommended"> · Recomendada</span></em></span>
@@ -382,7 +385,11 @@ onBeforeUnmount(clearPhotos)
             </button>
           </div>
 
-          <div v-if="selectedTemplate" class="checklist">
+          <div v-if="selectedTemplate" ref="checklistElement" class="checklist">
+            <div class="checklist-selected">
+              <span><i class="fa-solid fa-pen-to-square" /></span>
+              <div><small>Respondiendo ahora</small><strong>{{ selectedTemplate.name }}</strong></div>
+            </div>
             <article v-for="section in selectedTemplate.sections" :key="section.key" class="check-section">
               <button type="button" class="section-toggle" :aria-expanded="openSections.includes(section.key)" @click="toggleSection(section.key)">
                 <span><strong>{{ section.title }}</strong><small>{{ sectionProgress(section) }} respondidos</small></span>
@@ -481,7 +488,7 @@ onBeforeUnmount(clearPhotos)
 .spinner { width: 24px; height: 24px; border: 3px solid rgba($primary,.15); border-top-color: $primary; border-radius: 50%; animation: spin .8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 .section-heading { display: flex; align-items: center; gap: 12px; }
-.section-heading > div { min-width: 0; }
+.section-heading > div { min-width: 0; overflow-wrap: anywhere; }
 .section-heading h2 { margin: 0; font-size: 1.05rem; }
 .section-heading p { margin: 3px 0 0; color: $text-secondary; font-size: .8rem; }
 .step-number { width: 36px; height: 36px; flex: 0 0 36px; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; background: $primary; color: white; font-weight: 900; }
@@ -491,9 +498,9 @@ onBeforeUnmount(clearPhotos)
 .mode-switch button.active { background: white; color: $primary; box-shadow: $shadow-sm; }
 .mode-switch i { margin-right: 6px; }
 .field-row, .plant-form { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 14px; }
-.field { flex: 1 1 220px; min-width: 0; display: flex; flex-direction: column; gap: 6px; color: $text-secondary; font-size: .76rem; font-weight: 800; }
+.field { flex: 1 1 220px; width: 100%; min-width: 0; max-width: 100%; display: flex; flex-direction: column; gap: 6px; color: $text-secondary; font-size: .76rem; font-weight: 800; overflow-wrap: anywhere; }
 .field b { color: $alert-error; }
-.field input, .field select, .observation-field textarea { width: 100%; min-height: 46px; padding: 10px 12px; border: 1.5px solid rgba($primary-dark,.12); border-radius: 12px; outline: none; background: #f8fafc; color: $text; font: 600 .88rem $font-principal; transition: border-color .2s, background .2s; }
+.field input, .field select, .observation-field textarea { box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; min-height: 46px; padding: 10px 12px; border: 1.5px solid rgba($primary-dark,.12); border-radius: 12px; outline: none; background: #f8fafc; color: $text; font: 600 .88rem $font-principal; transition: border-color .2s, background .2s; }
 .field select { appearance: auto; cursor: pointer; }
 .field input:focus, .field select:focus, .observation-field textarea:focus { border-color: $primary; background: white; }
 .header-fields .field { flex-basis: 180px; }
@@ -505,16 +512,22 @@ onBeforeUnmount(clearPhotos)
 .primary-button.compact { flex: 0 1 auto; }
 .secondary-button { min-height: 46px; padding: 10px 15px; background: $primary-bg; color: $primary; }
 .add-plant { flex: 0 1 auto; }
-.template-list { display: flex; flex-wrap: wrap; gap: 12px; }
-.template-card { flex: 1 1 280px; min-width: 0; display: flex; align-items: center; gap: 12px; padding: 14px; border: 1.5px solid $border; border-radius: $radius-lg; background: white; color: $text; text-align: left; cursor: pointer; font-family: $font-principal; }
+.template-list { display: flex; flex-wrap: nowrap; gap: 10px; padding: 2px 2px 10px; overflow-x: auto; overscroll-behavior-inline: contain; scroll-snap-type: inline proximity; scrollbar-width: thin; }
+.template-card { flex: 0 0 min(320px, 82vw); min-width: 0; display: flex; align-items: center; gap: 12px; padding: 12px; border: 1.5px solid $border; border-radius: $radius-lg; background: white; color: $text; text-align: left; cursor: pointer; font-family: $font-principal; scroll-snap-align: start; }
 .template-card:hover, .template-card.active { border-color: $primary; background: $primary-bg; }
 .template-card > i { margin-left: auto; color: $primary; }
 .template-icon { width: 40px; height: 40px; flex: 0 0 40px; display: inline-flex; align-items: center; justify-content: center; border-radius: 12px; background: $primary-dark; color: white; }
 .template-copy { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
-.template-copy strong { font-size: .9rem; }
+.template-copy strong { font-size: .9rem; overflow-wrap: anywhere; }
 .template-copy small { color: $text-secondary; font-size: .72rem; line-height: 1.35; }
 .template-copy em { color: $primary; font-size: .65rem; font-style: normal; font-weight: 800; text-transform: capitalize; }
 .checklist, .item-list { display: flex; flex-direction: column; gap: 10px; }
+.checklist { scroll-margin-top: 82px; }
+.checklist-selected { display: flex; align-items: center; gap: 10px; padding: 11px 13px; border-radius: $radius-md; background: $primary-dark; color: white; }
+.checklist-selected > span { width: 34px; height: 34px; flex: 0 0 34px; display: inline-flex; align-items: center; justify-content: center; border-radius: 10px; background: rgba($accent,.2); color: $accent-light; }
+.checklist-selected > div { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.checklist-selected small { color: rgba(255,255,255,.62); font-size: .62rem; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; }
+.checklist-selected strong { font-size: .86rem; overflow-wrap: anywhere; }
 .check-section { border: 1px solid $border; border-radius: $radius-lg; overflow: hidden; }
 .section-toggle { width: 100%; display: flex; align-items: center; gap: 12px; padding: 15px; border: 0; background: rgba($primary,.04); color: $text; text-align: left; cursor: pointer; font-family: $font-principal; }
 .section-toggle > span { flex: 1; display: flex; flex-direction: column; gap: 3px; }
@@ -527,13 +540,13 @@ onBeforeUnmount(clearPhotos)
 .item-copy { flex: 1 1 340px; min-width: 0; display: flex; align-items: flex-start; gap: 10px; }
 .item-copy > span { width: 25px; height: 25px; flex: 0 0 25px; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; background: $primary-bg; color: $primary; font-size: .7rem; font-weight: 900; }
 .item-copy > div { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
-.item-copy strong { font-size: .86rem; line-height: 1.4; }
+.item-copy strong { font-size: .86rem; line-height: 1.4; overflow-wrap: anywhere; }
 .item-copy small { color: $text-secondary; font-size: .72rem; line-height: 1.4; }
 .status-options { flex: 0 1 auto; display: flex; flex-wrap: wrap; gap: 5px; }
-.status-options button { min-height: 38px; padding: 8px 12px; border: 1px solid $border; border-radius: 10px; background: white; color: $text-secondary; font: 850 .7rem $font-principal; cursor: pointer; }
+.status-options button { min-width: 0; min-height: 38px; padding: 8px 12px; border: 1px solid $border; border-radius: 10px; background: white; color: $text-secondary; font: 850 .7rem $font-principal; cursor: pointer; }
 .status-options button.active { border-color: $primary; background: $primary; color: white; }
 .status-options .no-option.active { border-color: $alert-error; background: $alert-error; }
-.observation-field { flex: 1 0 100%; display: flex; flex-direction: column; gap: 6px; color: $alert-error; font-size: .72rem; font-weight: 850; }
+.observation-field { flex: 1 0 100%; width: 100%; min-width: 0; max-width: 100%; display: flex; flex-direction: column; gap: 6px; color: $alert-error; font-size: .72rem; font-weight: 850; overflow-wrap: anywhere; }
 .observation-field textarea { min-height: 70px; resize: vertical; background: white; }
 .camera-notice { display: flex; align-items: flex-start; gap: 12px; padding: 14px; border-radius: $radius-lg; background: $alert-info-bg; color: darken($alert-info, 12%); }
 .camera-notice > i { padding-top: 2px; font-size: 1.1rem; }

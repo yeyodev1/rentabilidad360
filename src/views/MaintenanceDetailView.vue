@@ -717,10 +717,10 @@ onMounted(async () => {
 .qr-hint { font-size: 0.78rem; color: $text-secondary; }
 .qr-link { max-width: min(100%, 360px); padding: 8px 10px; border-radius: 12px; background: rgba($primary-dark, 0.05); color: $primary; font-size: 0.72rem; font-weight: 800; overflow-wrap: anywhere; text-align: center; text-decoration: none; &:hover { background: rgba($primary, 0.1); } }
 
-.checklist-section { margin: 0 12px; padding: 16px; border-radius: 22px; background: linear-gradient(145deg, white, rgba($bg, 0.78)); border: 1px solid rgba($primary, 0.2); display: flex; flex-direction: column; gap: 14px; box-shadow: 0 18px 42px rgba($primary-dark, 0.07); @media (min-width: $bp-mobile) { margin: 0 16px; padding: 20px; } }
+.checklist-section { min-width: 0; margin: 0 12px; padding: 16px; border-radius: 22px; background: linear-gradient(145deg, white, rgba($bg, 0.78)); border: 1px solid rgba($primary, 0.2); display: flex; flex-direction: column; gap: 14px; box-shadow: 0 18px 42px rgba($primary-dark, 0.07); @media (min-width: $bp-mobile) { margin: 0 16px; padding: 20px; } }
 .section-kicker { display: block; margin-bottom: 3px; color: $primary; font-size: 0.65rem; font-weight: 900; text-transform: uppercase; letter-spacing: 0.8px; }
 .checklist-form { padding: 16px; border-radius: 18px; background: white; border: 1px solid rgba($accent, 0.36); display: flex; flex-direction: column; gap: 10px; p { margin: 0 0 4px; color: $primary-dark; font-size: 0.82rem; line-height: 1.5; } }
-.check-row { position: relative; min-height: 48px; padding: 10px 12px; border-radius: 14px; background: rgba($primary, 0.07); display: flex; align-items: center; gap: 11px; cursor: pointer; color: $primary-dark; input { position: absolute; opacity: 0; pointer-events: none; } strong { font-size: 0.84rem; line-height: 1.35; } }
+.check-row { position: relative; min-width: 0; min-height: 48px; padding: 10px 12px; border-radius: 14px; background: rgba($primary, 0.07); display: flex; align-items: center; gap: 11px; cursor: pointer; color: $primary-dark; input { position: absolute; opacity: 0; pointer-events: none; } strong { min-width: 0; font-size: 0.84rem; line-height: 1.35; overflow-wrap: anywhere; } }
 .check-box { width: 26px; height: 26px; border-radius: 8px; border: 2px solid rgba($primary, 0.45); display: grid; place-items: center; color: transparent; flex-shrink: 0; background: white; transition: all 0.16s; }
 .check-row:has(input:checked) { background: rgba($accent, 0.16); .check-box { border-color: $accent; background: $accent; color: $primary-dark; } }
 .checklist-history { display: flex; flex-direction: column; gap: 8px; }
@@ -745,7 +745,7 @@ onMounted(async () => {
 .tickets-section { padding: 0 12px; display: flex; flex-direction: column; gap: 12px;
   @media (min-width: $bp-mobile) { padding: 0 16px; }
 }
-.sec-head { display: flex; align-items: center; justify-content: space-between; gap: 8px;
+.sec-head { min-width: 0; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px;
   h3 { margin: 0; font-size: 0.95rem; font-weight: 800; color: $primary-dark; i { color: $primary; } }
 }
 
@@ -755,7 +755,7 @@ onMounted(async () => {
 }
 .report-actions { display: flex; gap: 8px; justify-content: flex-end; }
 
-.field { display: flex; flex-direction: column; gap: 4px; }
+.field { width: 100%; min-width: 0; max-width: 100%; display: flex; flex-direction: column; gap: 4px; overflow-wrap: anywhere; }
 .lbl { font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.3px; color: $text-secondary; }
 .inp {
   width: 100%; padding: 14px; border: 2px solid rgba($primary-dark, 0.08); border-radius: 12px;
