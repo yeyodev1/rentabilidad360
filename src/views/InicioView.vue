@@ -119,6 +119,15 @@ onMounted(async () => {
           </div>
           <i class="fa-solid fa-chevron-right module-arrow" />
         </article>
+
+        <article class="module-card supervision-card" @click="router.push('/modulo/supervision')">
+          <div class="module-icon supervision"><i class="fa-solid fa-clipboard-check" /></div>
+          <div class="module-body">
+            <h3>Supervisión</h3>
+            <p>Checklists diarios con evidencia tomada en el lugar</p>
+          </div>
+          <i class="fa-solid fa-chevron-right module-arrow" />
+        </article>
         </div>
       </template>
     </div>
@@ -167,11 +176,14 @@ onMounted(async () => {
   padding: 20px; cursor: pointer; box-shadow: $shadow-sm; transition: transform 0.2s, box-shadow 0.2s;
   &:hover { transform: translateY(-2px); box-shadow: $shadow-md; }
 }
+.supervision-card { display: flex; }
+.supervision-card .module-body { flex: 1; }
 .module-icon {
   width: 56px; height: 56px; border-radius: $radius-md;
   display: flex; align-items: center; justify-content: center; font-size: 1.4rem; color: white;
   &.costeo { background: $primary-gradient; }
   &.mantenimiento { background: linear-gradient(135deg, $accent, darken($accent, 10%)); }
+  &.supervision { background: linear-gradient(135deg, $primary-dark, lighten($primary-dark, 12%)); }
 }
 .module-body { min-width: 0;
   h3 { margin: 0 0 4px; font-size: 1.05rem; font-weight: 800; color: $text; }

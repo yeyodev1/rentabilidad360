@@ -1,5 +1,5 @@
 <script setup lang="ts">
-defineProps<{ kind: 'diagnostico' | 'mantenimiento' | 'costeo' }>()
+defineProps<{ kind: 'diagnostico' | 'mantenimiento' | 'costeo' | 'supervision' }>()
 </script>
 
 <template>
@@ -65,6 +65,21 @@ defineProps<{ kind: 'diagnostico' | 'mantenimiento' | 'costeo' }>()
       <rect x="44" y="14" width="6" height="14" rx="3" fill="url(#np-cost-g)" />
       <circle cx="47" cy="32" r="5" fill="#ef4444" />
       <circle cx="47" cy="32" r="3" fill="#fb923c" />
+    </svg>
+
+    <!-- Supervisión -->
+    <svg v-else-if="kind === 'supervision'" viewBox="0 0 64 40" preserveAspectRatio="xMidYMid meet">
+      <rect width="64" height="40" rx="6" fill="#2F243A" />
+      <rect x="8" y="6" width="30" height="28" rx="4" fill="rgba(255,255,255,0.1)" />
+      <rect x="16" y="4" width="14" height="5" rx="2.5" fill="#8AC926" />
+      <circle cx="15" cy="15" r="3" fill="#8AC926" />
+      <path d="m13.5 15 1 1 2-2" fill="none" stroke="#2F243A" stroke-width="1.2" />
+      <rect x="21" y="13.5" width="12" height="3" rx="1.5" fill="rgba(255,255,255,0.45)" />
+      <circle cx="15" cy="24" r="3" fill="#588B8B" />
+      <rect x="21" y="22.5" width="10" height="3" rx="1.5" fill="rgba(255,255,255,0.3)" />
+      <rect x="43" y="12" width="14" height="17" rx="3" fill="#588B8B" />
+      <circle cx="50" cy="18" r="3" fill="rgba(255,255,255,0.8)" />
+      <path d="M46 26l3-4 2 2 2-3 3 5z" fill="rgba(255,255,255,0.65)" />
     </svg>
 
     <span class="np-badge"><i class="fa-solid fa-flask" /></span>

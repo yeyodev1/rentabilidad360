@@ -58,6 +58,12 @@ const routes: Array<RouteRecordRaw> = [
     meta: { title: 'Costeo de Recetas · Allio', requiresAuth: true, adminOnly: true },
   },
   {
+    path: '/modulo/supervision',
+    name: 'ModuleSupervision',
+    component: () => import('../views/SupervisionView.vue'),
+    meta: { title: 'Supervisión · Allio', requiresAuth: true },
+  },
+  {
     path: '/onboarding',
     name: 'Onboarding',
     component: () => import('../views/OnboardingFlow/index.vue'),

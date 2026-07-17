@@ -7,7 +7,7 @@ import NavPreview from '@/components/NavPreview.vue'
 import WorkspaceSettingsModal from '@/components/WorkspaceSettingsModal.vue'
 import AccountSettingsModal from '@/components/AccountSettingsModal.vue'
 
-type NavKind = 'diagnostico' | 'mantenimiento' | 'costeo'
+type NavKind = 'diagnostico' | 'mantenimiento' | 'costeo' | 'supervision'
 
 const router = useRouter()
 const route = useRoute()
@@ -71,6 +71,7 @@ interface NavItem {
 
 const nav = computed<NavItem[]>(() => userStore.isOperational ? [
   { to: '/modulo/mantenimiento', matches: ['/modulo/mantenimiento'], icon: 'fa-solid fa-screwdriver-wrench', label: 'Mantenimiento', kind: 'mantenimiento', hint: 'Equipos · reportes · checklist' },
+  { to: '/modulo/supervision', matches: ['/modulo/supervision'], icon: 'fa-solid fa-clipboard-check', label: 'Supervisión', kind: 'supervision', hint: 'Visitas · evidencia' },
 ] : [
   userStore.hasWorkspace
     ? {
@@ -92,6 +93,7 @@ const nav = computed<NavItem[]>(() => userStore.isOperational ? [
       },
   { to: '/modulo/costeo', matches: ['/modulo/costeo'], icon: 'fa-solid fa-sack-dollar', label: 'Costeo', kind: 'costeo', hint: 'Platos y precios' },
   { to: '/modulo/mantenimiento', matches: ['/modulo/mantenimiento'], icon: 'fa-solid fa-screwdriver-wrench', label: 'Mantenimiento', kind: 'mantenimiento', hint: 'QR · tickets' },
+  { to: '/modulo/supervision', matches: ['/modulo/supervision'], icon: 'fa-solid fa-clipboard-check', label: 'Supervisión', kind: 'supervision', hint: 'Visitas · evidencia' },
 ])
 
 const activeNav = computed(() => {
